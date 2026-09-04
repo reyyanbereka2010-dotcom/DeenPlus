@@ -1,0 +1,6 @@
+schemaVersion: 1
+sessionDefaults:
+  projectPath: './Deen+.xcodeproj'
+  scheme: 'Deen+'
+  configuration: 'Debug'
+  platform: 'iOS'
