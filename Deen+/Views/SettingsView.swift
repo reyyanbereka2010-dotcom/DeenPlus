@@ -33,6 +33,9 @@ struct SettingsView: View {
     @AppStorage("quranShowTranslation")
     private var quranShowTranslation: Bool = true
 
+    @AppStorage("selectedQuranReciter")
+    private var selectedQuranReciter: String = Reciter.alafasy.rawValue
+
     var body: some View {
 
         NavigationStack {
@@ -137,6 +140,12 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Picker("Recitation Sheikh", selection: $selectedQuranReciter) {
+                        ForEach(Reciter.allCases) { reciter in
+                            Text(reciter.displayName).tag(reciter.rawValue)
+                        }
+                    }
+
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Default Arabic Font Size")
@@ -150,7 +159,7 @@ struct SettingsView: View {
 
                     Toggle("Show English Translation", isOn: $quranShowTranslation)
                 } header: {
-                    Text("Quran Display")
+                    Text("Quran & Recitation")
                 }
 
                 Section {
@@ -181,41 +190,29 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Appearance")
-                } footer: {
-                    Text("Choose your preferred navigation bar style for moving between screens.")
                 }
 
                 Section {
 
                     HStack {
 
-                        Label(
-                            "Downloaded Surahs",
-                            systemImage: "arrow.down.circle.fill"
-                        )
+                        Text("Downloaded Surahs")
 
                         Spacer()
 
-                        Text(
-                            "\(downloadedCount)"
-                        )
-                        .foregroundStyle(.secondary)
+                        Text("\(downloadedCount)")
+                            .foregroundStyle(.secondary)
 
                     }
 
                     HStack {
 
-                        Label(
-                            "Bookmarked Verses",
-                            systemImage: "bookmark.fill"
-                        )
+                        Text("Bookmarks")
 
                         Spacer()
 
-                        Text(
-                            "\(bookmarkCount)"
-                        )
-                        .foregroundStyle(.secondary)
+                        Text("\(bookmarkCount)")
+                            .foregroundStyle(.secondary)
 
                     }
 
@@ -234,7 +231,7 @@ struct SettingsView: View {
 
                     }
                     .confirmationDialog(
-                        "Clear all downloaded Surahs?",
+                        "Clear all downloads?",
                         isPresented: $showClearDownloads,
                         titleVisibility: .visible
                     ) {
@@ -244,9 +241,10 @@ struct SettingsView: View {
                             role: .destructive
                         ) {
 
-                            QuranFileManager.shared.deleteAll {
-                                refreshCounts()
-                            }
+                            QuranFileManager.shared
+                                .deleteAllSurahs()
+
+                            refreshCounts()
 
                         }
 
@@ -320,7 +318,7 @@ struct SettingsView: View {
 
                         Spacer()
 
-                        Text("1.1.6 (8)")
+                        Text("1.1.7 (9)")
                             .foregroundStyle(.secondary)
 
                     }

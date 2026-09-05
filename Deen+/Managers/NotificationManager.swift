@@ -12,6 +12,54 @@ import AudioToolbox
 import CoreHaptics
 import SwiftUI
 
+// MARK: - Notification Sound Options
+
+enum NotificationSoundOption: String, CaseIterable, Identifiable, Sendable {
+    case adhanTakbeer = "adhan_takbeer"
+    case adhanFull = "adhan_full"
+    case defaultChime = "default_chime"
+    case silent = "silent"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .adhanTakbeer:
+            return "Takbeer Alert (26s)"
+        case .adhanFull:
+            return "Full Adhan (3 min)"
+        case .defaultChime:
+            return "Standard iOS Tone"
+        case .silent:
+            return "Silent (Vibrate Only)"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .adhanTakbeer:
+            return "Opening Takbeerat (lock-screen notification compliant)"
+        case .adhanFull:
+            return "Full Adhan audio (adhan.caf)"
+        case .defaultChime:
+            return "Default iOS notification chime"
+        case .silent:
+            return "Vibration only without alert tone"
+        }
+    }
+
+    var soundFileName: String? {
+        switch self {
+        case .adhanTakbeer:
+            return "adhan_takbeer.caf"
+        case .adhanFull:
+            return "adhan.caf"
+        case .defaultChime, .silent:
+            return nil
+        }
+    }
+}
+
 class NotificationManager {
     private let prayerIdentifiers: [String] = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
 
@@ -20,8 +68,9 @@ class NotificationManager {
     /// UserDefaults key for enabling/disabling in-app athan haptic feedback.
     /// Default value: true
     private let athaanHapticEnabledKey = "athaanHapticEnabled"
+    private let notificationSoundKey = "notificationSoundOption"
 
-    /// AVAudioPlayer instance for playing athan sound in-app.
+    /// AVAudioPlayer instance for playing athan sound in-app or preview.
     private var audioPlayer: AVAudioPlayer?
 
     /// Core Haptics engine instance.
@@ -95,14 +144,43 @@ class NotificationManager {
     public func handleForegroundAthan(for prayer: String) {
         let defaults = UserDefaults.standard
         let hapticEnabled = defaults.object(forKey: athaanHapticEnabledKey) as? Bool ?? true
+        let soundRaw = defaults.string(forKey: notificationSoundKey) ?? NotificationSoundOption.adhanTakbeer.rawValue
+        let soundOption = NotificationSoundOption(rawValue: soundRaw) ?? .adhanTakbeer
 
         // Play athan sound in-app
-        playAthanSound()
+        playAthanSound(option: soundOption)
 
         // Provide haptic feedback if enabled
         if hapticEnabled {
             triggerHapticFeedback()
         }
+    }
+
+    // MARK: - Sound Preview Methods
+
+    /// Play a preview of the selected notification sound.
+    public func playPreview(for option: NotificationSoundOption) {
+        stopPreview()
+
+        switch option {
+        case .adhanTakbeer, .adhanFull:
+            playAthanSound(option: option)
+        case .defaultChime:
+            AudioServicesPlaySystemSound(1005)
+        case .silent:
+            triggerHapticFeedback()
+        }
+    }
+
+    /// Stop playing audio preview.
+    public func stopPreview() {
+        audioPlayer?.stop()
+        audioPlayer = nil
+    }
+
+    /// Returns whether audio is currently playing in preview.
+    public var isPreviewPlaying: Bool {
+        return audioPlayer?.isPlaying ?? false
     }
 
     // MARK: - Private Methods
@@ -145,9 +223,22 @@ class NotificationManager {
         let content = UNMutableNotificationContent()
         content.title = "\(name) Prayer Time"
         content.body = prayerMessage(for: name)
-        content.sound = UNNotificationSound(
-            named: UNNotificationSoundName("adhan.caf")
-        )
+
+        let defaults = UserDefaults.standard
+        let soundRaw = defaults.string(forKey: notificationSoundKey) ?? NotificationSoundOption.adhanTakbeer.rawValue
+        let soundOption = NotificationSoundOption(rawValue: soundRaw) ?? .adhanTakbeer
+
+        switch soundOption {
+        case .adhanTakbeer:
+            content.sound = UNNotificationSound(named: UNNotificationSoundName("adhan_takbeer.caf"))
+        case .adhanFull:
+            content.sound = UNNotificationSound(named: UNNotificationSoundName("adhan.caf"))
+        case .defaultChime:
+            content.sound = .default
+        case .silent:
+            content.sound = nil
+        }
+
         content.categoryIdentifier = "prayerReminder"
 
         let trigger = UNCalendarNotificationTrigger(
@@ -206,19 +297,33 @@ class NotificationManager {
         }
     }
 
-    /// Play the athan sound in-app using AVAudioPlayer.
-    private func playAthanSound() {
-        guard let url = Bundle.main.url(forResource: "adhan", withExtension: "caf") else {
-            print("Athan sound file 'adhan.caf' not found in bundle.")
+    /// Play the athan/sound in-app using AVAudioPlayer.
+    private func playAthanSound(option: NotificationSoundOption) {
+        guard let soundFile = option.soundFileName else {
+            if option == .defaultChime {
+                AudioServicesPlaySystemSound(1005)
+            }
+            return
+        }
+
+        let name = (soundFile as NSString).deletingPathExtension
+        let ext = (soundFile as NSString).pathExtension
+
+        guard let url = Bundle.main.url(forResource: name, withExtension: ext) ??
+                        Bundle.main.url(forResource: name, withExtension: ext, subdirectory: nil) ??
+                        (FileManager.default.fileExists(atPath: soundFile) ? URL(fileURLWithPath: soundFile) : nil) else {
+            print("Audio sound file '\(soundFile)' not found.")
             return
         }
 
         do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.duckOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
             audioPlayer = try AVAudioPlayer(contentsOf: url)
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
         } catch {
-            print("Failed to play athan sound: \(error.localizedDescription)")
+            print("Failed to play sound: \(error.localizedDescription)")
         }
     }
 }

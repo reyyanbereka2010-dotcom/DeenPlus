@@ -133,13 +133,37 @@ struct SurahReaderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button {
-                        recitationPlayer.togglePlay(for: surah)
+                    Menu {
+                        Button {
+                            recitationPlayer.togglePlay(for: surah)
+                        } label: {
+                            Label(recitationPlayer.isPlaying ? "Pause Recitation" : "Play Full Surah", systemImage: recitationPlayer.isPlaying ? "pause.fill" : "play.fill")
+                        }
+
+                        Section("Sheikh / Reciter") {
+                            ForEach(Reciter.allCases) { reciter in
+                                Button {
+                                    recitationPlayer.setReciter(reciter)
+                                    if !recitationPlayer.isPlaying {
+                                        recitationPlayer.playSurah(surahId: surah, reciter: reciter)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(reciter.displayName)
+                                        if recitationPlayer.activeReciter == reciter {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     } label: {
                         Image(systemName: recitationPlayer.isPlaying ? "pause.circle.fill" : "play.circle")
                             .foregroundStyle(recitationPlayer.isPlaying ? .green : .primary)
+                    } primaryAction: {
+                        recitationPlayer.togglePlay(for: surah)
                     }
-                    .accessibilityLabel(recitationPlayer.isPlaying ? "Pause audio recitation" : "Play full surah recitation")
+                    .accessibilityLabel(recitationPlayer.isPlaying ? "Pause recitation" : "Play recitation (\(recitationPlayer.activeReciter.shortName))")
 
                     Button {
                         showDisplaySettings = true
@@ -213,9 +237,30 @@ struct SurahReaderView: View {
                 recitationPlayer.pause()
             }
             .sheet(isPresented: $showDisplaySettings) {
-                VStack(spacing: 24) {
-                    Text("Reader Settings")
+                VStack(spacing: 20) {
+                    Text("Reader & Audio Settings")
                         .font(.headline)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Reciter / Sheikh")
+                                .font(.subheadline)
+                            Spacer()
+                            Picker("Sheikh", selection: Binding(
+                                get: { recitationPlayer.activeReciter },
+                                set: { recitationPlayer.setReciter($0) }
+                            )) {
+                                ForEach(Reciter.allCases) { reciter in
+                                    Text(reciter.displayName).tag(reciter)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .tint(.green)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    
+                    Divider()
                     
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -246,7 +291,7 @@ struct SurahReaderView: View {
                     Spacer()
                 }
                 .padding()
-                .presentationDetents([.height(280)])
+                .presentationDetents([.height(340)])
             }
             .sheet(isPresented: $showJumpToAyah) {
                 let performJump: (Int) -> Void = { ayah in
@@ -278,24 +323,38 @@ struct SurahReaderView: View {
                         .padding()
                         .submitLabel(.go)
                         .onSubmit {
-                            guard let ayah = Int(targetAyahInput) else { return }
-                            performJump(ayah)
+                            if let ayah = Int(targetAyahInput) {
+                                performJump(ayah)
+                            }
                         }
                     
-                    Button("Go") {
-                        guard let ayah = Int(targetAyahInput) else { return }
-                        performJump(ayah)
+                    HStack {
+                        Button("Cancel") {
+                            showJumpToAyah = false
+                            targetAyahInput = ""
+                        }
+                        .foregroundStyle(.secondary)
+                        
+                        Spacer()
+                        
+                        Button("Jump") {
+                            if let ayah = Int(targetAyahInput) {
+                                performJump(ayah)
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(Int(targetAyahInput) == nil)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .padding(.horizontal)
                     
                     Spacer()
                 }
                 .padding()
-                .presentationDetents([.height(250)])
+                .presentationDetents([.height(260)])
             }
         }
     }
-
+    
     private func saveAyah(_ ayah: Int) {
         guard ayah > 0 else { return }
         currentAyah = ayah
@@ -306,11 +365,11 @@ struct SurahReaderView: View {
             verse: ayah
         )
     }
-
+    
     private func parseAyahNumber(from verseKey: String) -> Int {
         let parts = verseKey.split(separator: ":")
-        if parts.count == 2 {
-            return Int(parts[1]) ?? 0
+        if parts.count == 2, let ayahNum = Int(parts[1]) {
+            return ayahNum
         }
         return 0
     }

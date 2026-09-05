@@ -15,12 +15,20 @@ struct NotificationSettingsView: View {
     @AppStorage("notif_maghrib") private var maghribEnabled: Bool = true
     @AppStorage("notif_isha") private var ishaEnabled: Bool = true
 
+    // Selected notification sound
+    @AppStorage("notificationSoundOption")
+    private var notificationSoundOption: String = NotificationSoundOption.adhanTakbeer.rawValue
+
     // Toggle for in-app Athan haptic feedback
     @AppStorage("athaanHapticEnabled") private var athaanHapticEnabled: Bool = false
+
+    // State for audio previewing
+    @State private var previewingOption: NotificationSoundOption? = nil
 
     var body: some View {
         Form {
             statusSection
+            soundSection
             prayerSection
             athanHapticSection
             actionsSection
@@ -28,6 +36,10 @@ struct NotificationSettingsView: View {
         .navigationTitle("Notifications")
         .safeAreaPadding(.bottom, 60)
         .onAppear { refreshAuthorizationStatus() }
+        .onDisappear {
+            NotificationManager.shared.stopPreview()
+            previewingOption = nil
+        }
     }
 
     private var statusSection: some View {
@@ -51,6 +63,52 @@ struct NotificationSettingsView: View {
                 }
         } header: {
             Text("Status")
+        }
+    }
+
+    private var soundSection: some View {
+        Section {
+            ForEach(NotificationSoundOption.allCases) { option in
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text(option.displayName)
+                                .font(.body)
+                                .fontWeight(notificationSoundOption == option.rawValue ? .semibold : .regular)
+                            if notificationSoundOption == option.rawValue {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                        Text(option.subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    if option.soundFileName != nil || option == .defaultChime {
+                        Button {
+                            togglePreview(for: option)
+                        } label: {
+                            Image(systemName: previewingOption == option ? "stop.circle.fill" : "play.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(previewingOption == option ? .red : .green)
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(previewingOption == option ? "Stop audio preview" : "Play preview for \(option.displayName)")
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    notificationSoundOption = option.rawValue
+                    updateNotifications()
+                }
+            }
+        } header: {
+            Text("Notification Sound")
+        } footer: {
+            Text("Takbeer Alert provides the opening Adhan under 30s compliant with iOS lock-screen requirements. Full Adhan plays the complete 3-minute recording.")
         }
     }
 
@@ -107,6 +165,16 @@ struct NotificationSettingsView: View {
         }
     }
 
+    private func togglePreview(for option: NotificationSoundOption) {
+        if previewingOption == option {
+            NotificationManager.shared.stopPreview()
+            previewingOption = nil
+        } else {
+            previewingOption = option
+            NotificationManager.shared.playPreview(for: option)
+        }
+    }
+
     private func updateNotifications() {
         if masterEnabled {
             NotificationManager.shared.schedulePrayerNotifications(prayerTimes: prayerManager.prayerTimes)
@@ -155,12 +223,9 @@ struct NotificationSettingsView: View {
         switch status {
         case .authorized: return .green
         case .denied: return .red
-        case .provisional: return .orange
-        default: return .secondary
+        case .notDetermined: return .orange
+        case .provisional, .ephemeral: return .yellow
+        @unknown default: return .secondary
         }
     }
-}
-
-#Preview {
-    NavigationStack { NotificationSettingsView().environmentObject(PrayerManager()) }
 }

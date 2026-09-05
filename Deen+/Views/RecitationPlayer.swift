@@ -5,29 +5,77 @@ import Combine
 // MARK: - Reciter and URL provider
 
 enum Reciter: String, CaseIterable, Identifiable, Sendable {
-    case alafasy
+    case alafasy = "alafasy"
+    case sudais = "sudais"
+    case abdulbaset = "abdulbaset"
+    case ghamdi = "ghamdi"
+    case muaiqly = "muaiqly"
+    case husary = "husary"
+    case minshawi = "minshawi"
+    case shatri = "shatri"
+    case rifai = "rifai"
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .alafasy: return "Mishary Alafasy"
+        case .alafasy: return "Mishary Rashid Alafasy"
+        case .sudais: return "Abdur-Rahman As-Sudais"
+        case .abdulbaset: return "AbdulBaset AbdulSamad"
+        case .ghamdi: return "Saad Al-Ghamdi"
+        case .muaiqly: return "Maher Al-Muaiqly"
+        case .husary: return "Mahmoud Khalil Al-Husary"
+        case .minshawi: return "Mohamed Siddiq Al-Minshawi"
+        case .shatri: return "Abu Bakr Al-Shatri"
+        case .rifai: return "Hani Ar-Rifai"
         }
     }
 
-    /// Base path for the reciter's surah MP3s (001.mp3 ... 114.mp3)
+    var shortName: String {
+        switch self {
+        case .alafasy: return "Alafasy"
+        case .sudais: return "As-Sudais"
+        case .abdulbaset: return "AbdulBaset"
+        case .ghamdi: return "Al-Ghamdi"
+        case .muaiqly: return "Al-Muaiqly"
+        case .husary: return "Al-Husary"
+        case .minshawi: return "Al-Minshawi"
+        case .shatri: return "Al-Shatri"
+        case .rifai: return "Ar-Rifai"
+        }
+    }
+
+    /// Base path for the reciter's surah MP3 files
     var basePath: String {
         switch self {
-        case .alafasy: return "https://everyayah.com/data/Alafasy_64kbps"
+        case .alafasy: return "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal"
+        case .sudais: return "https://download.quranicaudio.com/qdc/abdurrahmaan_as_sudais/murattal"
+        case .abdulbaset: return "https://download.quranicaudio.com/qdc/abdul_baset/murattal"
+        case .ghamdi: return "https://server7.mp3quran.net/s_gmd"
+        case .muaiqly: return "https://server12.mp3quran.net/maher"
+        case .husary: return "https://download.quranicaudio.com/qdc/khalil_al_husary/murattal"
+        case .minshawi: return "https://download.quranicaudio.com/qdc/siddiq_minshawi/murattal"
+        case .shatri: return "https://download.quranicaudio.com/qdc/abu_bakr_shatri/murattal"
+        case .rifai: return "https://download.quranicaudio.com/qdc/hani_ar_rifai/murattal"
+        }
+    }
+
+    /// Returns streaming audio URL for full Surah (1...114)
+    func surahURL(surahId: Int) -> URL? {
+        guard (1...114).contains(surahId) else { return nil }
+        switch self {
+        case .ghamdi, .muaiqly:
+            let num = String(format: "%03d", surahId)
+            return URL(string: "\(basePath)/\(num).mp3")
+        default:
+            return URL(string: "\(basePath)/\(surahId).mp3")
         }
     }
 }
 
 struct RecitationProvider {
     static func surahURL(surahId: Int, reciter: Reciter = .alafasy) -> URL? {
-        guard (1...114).contains(surahId) else { return nil }
-        let number = String(format: "%03d", surahId)
-        return URL(string: "\(reciter.basePath)/\(number).mp3")
+        reciter.surahURL(surahId: surahId)
     }
 }
 
@@ -37,28 +85,51 @@ struct RecitationProvider {
 final class RecitationPlayer: ObservableObject {
     @Published private(set) var isPlaying: Bool = false
     @Published private(set) var currentSurahId: Int?
+    @Published var activeReciter: Reciter = .alafasy
 
     private var player: AVPlayer?
     private var endObserver: Any?
+    private let reciterStorageKey = "selectedQuranReciter"
+
+    init() {
+        if let saved = UserDefaults.standard.string(forKey: reciterStorageKey),
+           let reciter = Reciter(rawValue: saved) {
+            self.activeReciter = reciter
+        } else {
+            self.activeReciter = .alafasy
+        }
+    }
 
     deinit {
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
     }
 
-    func togglePlay(for surahId: Int, reciter: Reciter = .alafasy) {
-        if isPlaying, currentSurahId == surahId {
-            pause()
-        } else {
-            playSurah(surahId: surahId, reciter: reciter)
+    func setReciter(_ reciter: Reciter) {
+        guard reciter != activeReciter else { return }
+        activeReciter = reciter
+        UserDefaults.standard.set(reciter.rawValue, forKey: reciterStorageKey)
+        if isPlaying, let current = currentSurahId {
+            playSurah(surahId: current, reciter: reciter)
         }
     }
 
-    func playSurah(surahId: Int, reciter: Reciter = .alafasy) {
-        guard let url = RecitationProvider.surahURL(surahId: surahId, reciter: reciter) else { return }
+    func togglePlay(for surahId: Int, reciter: Reciter? = nil) {
+        let chosen = reciter ?? activeReciter
+        if isPlaying, currentSurahId == surahId {
+            pause()
+        } else {
+            playSurah(surahId: surahId, reciter: chosen)
+        }
+    }
+
+    func playSurah(surahId: Int, reciter: Reciter? = nil) {
+        let chosen = reciter ?? activeReciter
+        guard let url = RecitationProvider.surahURL(surahId: surahId, reciter: chosen) else { return }
         prepareSession()
-        if currentSurahId != surahId || player == nil {
+        if currentSurahId != surahId || activeReciter != chosen || player == nil {
             player = AVPlayer(url: url)
             currentSurahId = surahId
+            activeReciter = chosen
         }
         player?.play()
         isPlaying = true
@@ -76,7 +147,7 @@ final class RecitationPlayer: ObservableObject {
             try session.setCategory(.playback, mode: .default, options: [])
             try session.setActive(true)
         } catch {
-            // Silently ignore session errors for now
+            // Silently ignore session errors
         }
     }
 

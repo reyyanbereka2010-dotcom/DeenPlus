@@ -7,11 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3EDBA03C30113A630042325D /* adhan_takbeer.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA03B30113A630042325D /* adhan_takbeer.caf */; };
 		3EDBA02C30113A630042325D /* adhan.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA02B30113A630042325D /* adhan.caf */; };
 		3EDBA04B3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA04A3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3EDBA03B30113A630042325D /* adhan_takbeer.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan_takbeer.caf; sourceTree = "<group>"; };
 		3E134D73300D793500EAFBD4 /* Deen--Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Deen--Info.plist"; sourceTree = "<group>"; };
 		3E75040B3009DC0100875DDF /* Deen+.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Deen+.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3EDBA02B30113A630042325D /* adhan.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan.caf; sourceTree = "<group>"; };
@@ -52,6 +54,7 @@
 				3E134D73300D793500EAFBD4 /* Deen--Info.plist */,
 				3EDBA04A3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf */,
 				3EDBA02B30113A630042325D /* adhan.caf */,
+				3EDBA03B30113A630042325D /* adhan_takbeer.caf */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -121,6 +124,7 @@
 			files = (
 				3EDBA04B3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf in Resources */,
 				3EDBA02C30113A630042325D /* adhan.caf in Resources */,
+				3EDBA03C30113A630042325D /* adhan_takbeer.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -262,7 +266,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = D74384M94C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -279,7 +283,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.6;
+				MARKETING_VERSION = 1.1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reyber.Deen;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -298,7 +302,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = D74384M94C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -315,7 +319,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.6;
+				MARKETING_VERSION = 1.1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reyber.Deen;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

@@ -187,6 +187,10 @@ final class QuranFileManager {
 
     // MARK: - Delete All
 
+    func deleteAllSurahs(completion: (() -> Void)? = nil) {
+        deleteAll(completion: completion)
+    }
+
     func deleteAll(completion: (() -> Void)? = nil) {
 
         ioQueue.async {
