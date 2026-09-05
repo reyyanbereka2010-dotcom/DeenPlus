@@ -1,5 +1,6 @@
+
 # Deen+ 
-<img width="500" height="500" alt="Deen+ App Icon" src="https://github.com/user-attachments/assets/3e3a15be-eb28-49e4-9412-c4d6da69b442" />
+<img width="500" height="500" alt="Deen+ App Icon for iOS" src="https://github.com/user-attachments/assets/85c9367e-31cd-449f-ac7c-42296bd8af83" />
 
 
 A iOS Islamic prayer app built with SwiftUI.
