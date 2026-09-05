@@ -19,7 +19,7 @@ enum DuaCategory: String, CaseIterable, Identifiable {
 }
 
 struct DuaItem: Identifiable {
-    let id = UUID()
+    let id: String
     let category: DuaCategory
     let title: String
     let arabic: String
@@ -32,11 +32,31 @@ struct DuaItem: Identifiable {
 struct DailyDuasView: View {
 
     @State private var selectedCategory: DuaCategory = .morningEvening
-    @State private var duaCounts: [UUID: Int] = [:]
+    @AppStorage("saved_dua_counts_v1") private var rawDuaCounts: String = "{}"
+
+    private var duaCounts: [String: Int] {
+        get {
+            guard let data = rawDuaCounts.data(using: .utf8),
+                  let dict = try? JSONDecoder().decode([String: Int].self, from: data) else {
+                return [:]
+            }
+            return dict
+        }
+    }
+
+    private func setDuaCount(_ count: Int, for id: String) {
+        var current = duaCounts
+        current[id] = count
+        if let encoded = try? JSONEncoder().encode(current),
+           let str = String(data: encoded, encoding: .utf8) {
+            rawDuaCounts = str
+        }
+    }
 
     private let duas: [DuaItem] = [
         // Morning & Evening
         DuaItem(
+            id: "morning_remembrance",
             category: .morningEvening,
             title: "Morning Remembrance",
             arabic: "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ",
@@ -46,6 +66,7 @@ struct DailyDuasView: View {
             targetCount: 1
         ),
         DuaItem(
+            id: "seeking_protection",
             category: .morningEvening,
             title: "Seeking Protection",
             arabic: "بِسْمِ اللَّهِ الَّذِي لاَ يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الأَرْضِ وَلاَ فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ",
@@ -55,6 +76,7 @@ struct DailyDuasView: View {
             targetCount: 3
         ),
         DuaItem(
+            id: "sayyid_al_istighfar",
             category: .morningEvening,
             title: "Sayyid al-Istighfar (Chief of Prayers for Forgiveness)",
             arabic: "اللَّهُمَّ أَنْتَ رَبِّي لاَ إِلَهَ إِلاَّ أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لاَ يَغْفِرُ الذُّنُوبَ إِلاَّ أَنْتَ",
@@ -65,6 +87,7 @@ struct DailyDuasView: View {
         ),
         // Daily Life
         DuaItem(
+            id: "before_sleeping",
             category: .daily,
             title: "Before Sleeping",
             arabic: "بِاسْمِكَ رَبِّي وَضَعْتُ جَنْبِي وَبِكَ أَرْفَعُهُ، فَإِنْ أَمْسَكْتَ نَفْسِي فَارْحَمْهَا، وَإِنْ أَرْسَلْتَهَا فَاحْفَظْهَا بِمَا تَحْفَظُ بِهِ عِبَادَكَ الصَّالِحِينَ",
@@ -74,6 +97,7 @@ struct DailyDuasView: View {
             targetCount: 1
         ),
         DuaItem(
+            id: "leaving_house",
             category: .daily,
             title: "Leaving the House",
             arabic: "بِسْمِ اللَّهِ تَوَكَّلْتُ عَلَى اللَّهِ، لاَ حَوْلَ وَلاَ قُوَّةَ إِلاَّ بِاللَّهِ",
@@ -83,6 +107,7 @@ struct DailyDuasView: View {
             targetCount: 1
         ),
         DuaItem(
+            id: "before_eating",
             category: .daily,
             title: "Before Eating",
             arabic: "بِسْمِ اللَّهِ وَعَلَى بَرَكَةِ اللَّهِ",
@@ -93,6 +118,7 @@ struct DailyDuasView: View {
         ),
         // Prayer & Forgiveness
         DuaItem(
+            id: "dua_parents",
             category: .prayer,
             title: "Dua for Parents (Surah Al-Isra 17:24)",
             arabic: "رَّبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا",
@@ -102,6 +128,7 @@ struct DailyDuasView: View {
             targetCount: 3
         ),
         DuaItem(
+            id: "dua_good_in_life_and_next",
             category: .prayer,
             title: "For Good in this Life & the Next (2:201)",
             arabic: "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
@@ -111,6 +138,7 @@ struct DailyDuasView: View {
             targetCount: 3
         ),
         DuaItem(
+            id: "dua_sujood",
             category: .prayer,
             title: "Supplication in Sujood",
             arabic: "سُبْحَانَ رَبِّيَ الأَعْلَى وَبِحَمْدِهِ",
@@ -144,15 +172,33 @@ struct DailyDuasView: View {
                         dua: dua,
                         count: duaCounts[dua.id] ?? 0,
                         onIncrement: {
+                            let cur = duaCounts[dua.id] ?? 0
+                            if cur < dua.targetCount {
+                                let next = cur + 1
+                                setDuaCount(next, for: dua.id)
+                                #if canImport(UIKit)
+                                if next >= dua.targetCount {
+                                    let notif = UINotificationFeedbackGenerator()
+                                    notif.notificationOccurred(.success)
+                                } else {
+                                    let generator = UIImpactFeedbackGenerator(style: .light)
+                                    generator.impactOccurred()
+                                }
+                                #endif
+                            } else {
+                                // Already completed: keep count at targetCount and provide feedback
+                                #if canImport(UIKit)
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                                #endif
+                            }
+                        },
+                        onReset: {
+                            setDuaCount(0, for: dua.id)
                             #if canImport(UIKit)
                             let generator = UIImpactFeedbackGenerator(style: .light)
                             generator.impactOccurred()
                             #endif
-                            let cur = duaCounts[dua.id] ?? 0
-                            duaCounts[dua.id] = cur + 1
-                        },
-                        onReset: {
-                            duaCounts[dua.id] = 0
                         }
                     )
                 }

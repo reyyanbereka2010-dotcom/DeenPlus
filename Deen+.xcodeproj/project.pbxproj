@@ -7,16 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3EDBA03C30113A630042325D /* adhan_takbeer.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA03B30113A630042325D /* adhan_takbeer.caf */; };
 		3EDBA02C30113A630042325D /* adhan.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA02B30113A630042325D /* adhan.caf */; };
+		3EDBA03C30113A630042325D /* adhan_takbeer.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA03B30113A630042325D /* adhan_takbeer.caf */; };
 		3EDBA04B3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA04A3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		3EDBA03B30113A630042325D /* adhan_takbeer.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan_takbeer.caf; sourceTree = "<group>"; };
 		3E134D73300D793500EAFBD4 /* Deen--Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Deen--Info.plist"; sourceTree = "<group>"; };
 		3E75040B3009DC0100875DDF /* Deen+.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Deen+.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3EDBA02B30113A630042325D /* adhan.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan.caf; sourceTree = "<group>"; };
+		3EDBA03B30113A630042325D /* adhan_takbeer.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan_takbeer.caf; sourceTree = "<group>"; };
 		3EDBA04A3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "KFGQPC Uthmanic Script HAFS Regular.otf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
