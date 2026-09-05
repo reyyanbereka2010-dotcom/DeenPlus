@@ -7,7 +7,10 @@
 
 import SwiftUI
 
-struct DayPrayerSchedule: Identifiable {
+struct DayPrayerSchedule: Identifiable, Equatable {
+    static func == (lhs: DayPrayerSchedule, rhs: DayPrayerSchedule) -> Bool {
+        lhs.date == rhs.date && lhs.times.fajr == rhs.times.fajr
+    }
     let id = UUID()
     let date: Date
     let gregorianDay: Int
@@ -20,6 +23,7 @@ struct DayPrayerSchedule: Identifiable {
 struct MonthlyCalendarView: View {
 
     @EnvironmentObject var prayerManager: PrayerManager
+    @StateObject private var locationManager = LocationManager()
     @State private var selectedMonthOffset: Int = 0 // 0 = current month, -1 = last, +1 = next
 
     private let calendar = Calendar.current
@@ -56,7 +60,9 @@ struct MonthlyCalendarView: View {
             }
 
             let hijri = HijriCalendarManager.shared.getHijriDate(for: dayDate)
-            let times = prayerManager.timesForDate(dayDate)
+            let lat = locationManager.latitude != 0 ? locationManager.latitude : nil
+            let lon = locationManager.longitude != 0 ? locationManager.longitude : nil
+            let times = prayerManager.timesForDate(dayDate, latitude: lat, longitude: lon)
             let isToday = calendar.isDate(dayDate, inSameDayAs: today)
 
             return DayPrayerSchedule(
@@ -76,7 +82,7 @@ struct MonthlyCalendarView: View {
                 // Month Selector Header
                 HStack {
                     Button {
-                        selectedMonthOffset -= 1
+                        withAnimation(.easeInOut(duration: 0.25)) { selectedMonthOffset -= 1 }
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.headline)
@@ -99,7 +105,7 @@ struct MonthlyCalendarView: View {
                     Spacer()
 
                     Button {
-                        selectedMonthOffset += 1
+                        withAnimation(.easeInOut(duration: 0.25)) { selectedMonthOffset += 1 }
                     } label: {
                         Image(systemName: "chevron.right")
                             .font(.headline)
@@ -145,7 +151,7 @@ struct MonthlyCalendarView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(daysInMonth) { day in
+                            ForEach(daysInMonth, id: \.date) { day in
                                 HStack(spacing: 0) {
                                     // Date Column
                                     VStack(alignment: .leading, spacing: 2) {
@@ -191,18 +197,30 @@ struct MonthlyCalendarView: View {
                                     ? Color.green.opacity(0.12)
                                     : (day.hijriInfo.event != nil ? Color.orange.opacity(0.06) : Color.clear)
                                 )
-                                .id(day.gregorianDay)
+                                .id("\(selectedMonthOffset)-\(day.gregorianDay)")
 
                                 Divider()
                             }
                         }
                     }
+                    .id(selectedMonthOffset)
                     .onAppear {
+                        locationManager.requestLocation()
                         if selectedMonthOffset == 0 {
                             let todayDay = calendar.component(.day, from: Date())
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 withAnimation {
-                                    proxy.scrollTo(todayDay, anchor: .center)
+                                    proxy.scrollTo("0-\(todayDay)", anchor: .center)
+                                }
+                            }
+                        }
+                    }
+                    .onChange(of: selectedMonthOffset) { newOffset in
+                        if newOffset == 0 {
+                            let todayDay = calendar.component(.day, from: Date())
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                withAnimation {
+                                    proxy.scrollTo("0-\(todayDay)", anchor: .center)
                                 }
                             }
                         }
@@ -215,7 +233,7 @@ struct MonthlyCalendarView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     if selectedMonthOffset != 0 {
                         Button("Today") {
-                            selectedMonthOffset = 0
+                            withAnimation(.easeInOut(duration: 0.25)) { selectedMonthOffset = 0 }
                         }
                     }
                 }
