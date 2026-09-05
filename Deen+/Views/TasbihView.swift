@@ -232,7 +232,7 @@ struct TasbihView: View {
                         .background(Color(.secondarySystemGroupedBackground))
                         .cornerRadius(16)
                         .padding(.horizontal)
-                        .padding(.bottom, 24)
+                        .padding(.bottom, 80)
                     }
                     .padding(.top, 10)
                 }

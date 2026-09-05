@@ -112,7 +112,7 @@ struct SurahReaderView: View {
                     }
                 }
                 .padding(.horizontal)
-                .padding(.bottom, 20)
+                .padding(.bottom, 80)
             }
             .coordinateSpace(name: "scroll")
             .onPreferenceChange(AyahPositionKey.self) { positions in
@@ -188,19 +188,20 @@ struct SurahReaderView: View {
                     await MainActor.run {
                         let targetVerse = resumeVerse ?? highlightVerse
                         if let targetVerse = targetVerse {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                 withAnimation {
                                     proxy.scrollTo(targetVerse, anchor: .center)
                                     highlightedAyahNumber = targetVerse
                                 }
-                                
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    hasFinishedInitialScroll = true
+                                }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                                     withAnimation {
                                         highlightedAyahNumber = nil
                                     }
                                 }
                             }
-                            hasFinishedInitialScroll = true
                         } else {
                             highlightedAyahNumber = nil
                             hasFinishedInitialScroll = true

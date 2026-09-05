@@ -49,6 +49,7 @@ struct BookmarksView: View {
             .onDelete(perform: deleteBookmark)
         }
         .navigationTitle("Bookmarks")
+        .safeAreaPadding(.bottom, 60)
         .onAppear {
             loadBookmarks()
         }

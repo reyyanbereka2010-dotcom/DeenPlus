@@ -145,6 +145,7 @@ struct QuranView: View {
             }
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search surah name or number...")
             .navigationTitle("Quran")
+            .safeAreaPadding(.bottom, 60)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {

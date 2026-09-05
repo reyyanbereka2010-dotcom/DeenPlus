@@ -1,10 +1,10 @@
-## Deen+ v1.1.4
+## Deen+ v1.1.5
 
 ### What's New:
-- **Streamlined Tab Bar**: Reorganized the menu tabs to put Quran and Duas front and center, with Settings properly positioned on the far right under More/Settings.
-- **Fixed Quran Reader Navigation**: Removed the duplicate back button when opening a Surah so navigation remains clean and native across Quran, Bookmarks, and Downloads.
-- **Synchronized Home Quick Actions**: Updated quick action shortcuts on the Home dashboard to match the new tab structure.
-- **Dynamic Monthly Calendar**: Prayer schedules dynamically adapt and calculate precisely across all months.
+- **Customizable Menu Bar**: Introduced custom rectangular menu bar options (Modern Pill / Rectangle, Floating Capsule, or Native Standard Tab Bar), selectable directly from **Settings > Appearance**.
+- **All 7 Tabs Visible at a Glance**: All main features (Home, Prayers, Quran, Duas, Qibla, Tasbih, Settings) are now directly accessible with sleek active indicators without being buried behind a "More" menu.
+- **Scroll Timing & Safe Area Polishing**: Improved Quran reader initial scroll synchronization and added bottom padding to all views so content is never obstructed by the floating navigation bar.
+- **Enhanced Native Navigation**: Clean back buttons and seamless transitions across all subviews.
 
 ### Sideloading Instructions:
 1. Download `Deen+.ipa` below.

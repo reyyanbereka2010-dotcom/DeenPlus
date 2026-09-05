@@ -158,6 +158,7 @@ struct DailyDuasView: View {
                 }
             }
             .navigationTitle("Daily Duas")
+            .safeAreaPadding(.bottom, 60)
         }
     }
 }

@@ -229,6 +229,7 @@ struct MonthlyCalendarView: View {
             }
             .navigationTitle("Prayer Schedule")
             .navigationBarTitleDisplayMode(.inline)
+            .safeAreaPadding(.bottom, 60)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if selectedMonthOffset != 0 {

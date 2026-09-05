@@ -112,6 +112,7 @@ struct PrayerTimesView: View {
                 }
             }
             .navigationTitle("Prayer Times")
+            .safeAreaPadding(.bottom, 60)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {

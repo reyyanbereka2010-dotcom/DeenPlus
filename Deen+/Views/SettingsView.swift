@@ -18,6 +18,8 @@ struct SettingsView: View {
 
     @AppStorage("appTheme")
     private var appTheme = "System"
+    @AppStorage("menuBarStyle")
+    private var menuBarStyle: String = "pill"
 
     @AppStorage("prayerNotificationsEnabled")
     private var prayerNotificationsEnabled: Bool = false
@@ -160,25 +162,27 @@ struct SettingsView: View {
                 }
 
                 Section {
-
                     Picker(
                         "Theme",
                         selection: $appTheme
                     ) {
-
-                        Text("System")
-                            .tag("System")
-
-                        Text("Light")
-                            .tag("Light")
-
-                        Text("Dark")
-                            .tag("Dark")
-
+                        Text("System").tag("System")
+                        Text("Light").tag("Light")
+                        Text("Dark").tag("Dark")
                     }
 
+                    Picker(
+                        "Menu Bar Style",
+                        selection: $menuBarStyle
+                    ) {
+                        Text("Modern Pill / Rectangle").tag("pill")
+                        Text("Floating Capsule").tag("floating")
+                        Text("Standard Tab Bar").tag("standard")
+                    }
                 } header: {
                     Text("Appearance")
+                } footer: {
+                    Text("Choose your preferred navigation bar style for moving between screens.")
                 }
 
                 Section {
@@ -316,7 +320,7 @@ struct SettingsView: View {
 
                         Spacer()
 
-                        Text("1.1.4 (6)")
+                        Text("1.1.5 (7)")
                             .foregroundStyle(.secondary)
 
                     }
@@ -352,6 +356,7 @@ struct SettingsView: View {
             .navigationTitle(
                 "Settings"
             )
+            .safeAreaPadding(.bottom, 60)
 
             .onAppear {
 

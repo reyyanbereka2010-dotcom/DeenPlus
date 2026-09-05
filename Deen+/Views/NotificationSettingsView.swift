@@ -26,6 +26,7 @@ struct NotificationSettingsView: View {
             actionsSection
         }
         .navigationTitle("Notifications")
+        .safeAreaPadding(.bottom, 60)
         .onAppear { refreshAuthorizationStatus() }
     }
 

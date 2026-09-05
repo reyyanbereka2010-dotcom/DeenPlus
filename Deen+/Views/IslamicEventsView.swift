@@ -79,5 +79,6 @@ struct IslamicEventsView: View {
         }
         .navigationTitle("Islamic Events")
         .navigationBarTitleDisplayMode(.inline)
+        .safeAreaPadding(.bottom, 60)
     }
 }

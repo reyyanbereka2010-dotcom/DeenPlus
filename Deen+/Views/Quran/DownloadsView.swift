@@ -149,6 +149,7 @@ struct DownloadsView: View {
         .navigationTitle(
             "Quran Downloads"
         )
+        .safeAreaPadding(.bottom, 60)
 
         .overlay {
 
