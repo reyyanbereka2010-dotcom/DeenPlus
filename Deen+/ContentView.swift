@@ -32,24 +32,30 @@ struct ContentView: View {
                     Label("Qibla", systemImage: "location.north.fill")
                 }
                 .tag(2)
-            
+
+            DailyDuasView()
+                .tabItem {
+                    Label("Duas", systemImage: "hands.sparkles.fill")
+                }
+                .tag(3)
+
             TasbihView()
                 .tabItem {
                     Label("Tasbih", systemImage: "circle.circle.fill")
                 }
-                .tag(3)
+                .tag(4)
 
             QuranView()
                 .tabItem {
                     Label("Quran", systemImage: "book.fill")
                 }
-                .tag(4)
+                .tag(5)
 
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")
                 }
-                .tag(5)
+                .tag(6)
         }
         .toolbar(
             hideTabBar ? .hidden : .visible,

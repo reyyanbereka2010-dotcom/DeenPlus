@@ -30,6 +30,8 @@ struct HomeView: View {
     
     @State private var animatePulse = false
     @State private var animateGlow = false
+
+    private let hijriManager = HijriCalendarManager.shared
     
     var currentPrayerStatus: PrayerStatus {
         let prayers = [
@@ -101,52 +103,63 @@ struct HomeView: View {
         return time
     }
     
-    var prayerIcon: String {
-        switch currentPrayerStatus.prayerName {
-        case "Fajr":
-            return "sunrise.fill"
-        case "Dhuhr":
-            return "sun.max.fill"
-        case "Asr":
-            return "sun.haze.fill"
-        case "Maghrib":
-            return "sunset.fill"
-        case "Isha":
-            return "moon.stars.fill"
-        default:
-            return "sun.max.fill"
+    var currentSkyName: String {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: Date())
+        switch hour {
+        case 4..<6: return "Fajr"
+        case 6..<11: return "Morning"
+        case 11..<15: return "Dhuhr"
+        case 15..<18: return "Asr"
+        case 18..<20: return "Maghrib"
+        default: return "Isha"
         }
     }
     
     var skyGradient: [Color] {
-        switch currentPrayerStatus.prayerName {
-        case "Fajr":
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: Date())
+        
+        switch hour {
+        case 4..<6:
+            // Fajr: Mystical dawn twilight (deep purple into soft rose & orange)
             return [
-                Color(red: 0.12, green: 0.16, blue: 0.38),
-                Color(red: 0.45, green: 0.28, blue: 0.52),
-                Color(red: 0.88, green: 0.52, blue: 0.42)
+                Color(red: 0.12, green: 0.08, blue: 0.25),
+                Color(red: 0.35, green: 0.15, blue: 0.35),
+                Color(red: 0.85, green: 0.40, blue: 0.35)
             ]
-        case "Dhuhr":
+        case 6..<11:
+            // Morning: Fresh crisp daylight
             return [
-                Color(red: 0.05, green: 0.42, blue: 0.85),
-                Color(red: 0.22, green: 0.65, blue: 0.95),
+                Color(red: 0.20, green: 0.50, blue: 0.85),
+                Color(red: 0.45, green: 0.75, blue: 0.95),
+                Color(red: 0.70, green: 0.90, blue: 0.98)
+            ]
+        case 11..<15:
+            // Dhuhr: Brilliant high-noon azure
+            return [
+                Color(red: 0.08, green: 0.42, blue: 0.82),
+                Color(red: 0.25, green: 0.65, blue: 0.95),
                 Color(red: 0.55, green: 0.85, blue: 0.98)
             ]
-        case "Asr":
+        case 15..<18:
+            // Asr: Warm golden afternoon
             return [
-                Color(red: 0.15, green: 0.28, blue: 0.58),
-                Color(red: 0.75, green: 0.48, blue: 0.28),
-                Color(red: 0.95, green: 0.72, blue: 0.35)
+                Color(red: 0.15, green: 0.35, blue: 0.65),
+                Color(red: 0.60, green: 0.50, blue: 0.40),
+                Color(red: 0.92, green: 0.62, blue: 0.35)
             ]
-        case "Maghrib":
+        case 18..<20:
+            // Maghrib: Rich sunset crimson & violet
             return [
-                Color(red: 0.18, green: 0.08, blue: 0.32),
-                Color(red: 0.58, green: 0.18, blue: 0.38),
-                Color(red: 0.88, green: 0.38, blue: 0.25)
+                Color(red: 0.18, green: 0.10, blue: 0.32),
+                Color(red: 0.65, green: 0.22, blue: 0.35),
+                Color(red: 0.95, green: 0.45, blue: 0.25)
             ]
-        case "Isha":
+        case 20..<24, 0..<4:
+            // Isha & Night: Deep midnight celestial blue
             return [
-                Color(red: 0.03, green: 0.05, blue: 0.14),
+                Color(red: 0.04, green: 0.06, blue: 0.16),
                 Color(red: 0.08, green: 0.12, blue: 0.28),
                 Color(red: 0.02, green: 0.03, blue: 0.10)
             ]
@@ -155,11 +168,11 @@ struct HomeView: View {
         }
     }
     
-    let dateFormatter: DateFormatter = {
+    var currentDateFormatted: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMMM d, yyyy"
-        return formatter
-    }()
+        return formatter.string(from: Date())
+    }
     
     private func triggerHaptic() {
         #if canImport(UIKit)
@@ -202,7 +215,8 @@ struct HomeView: View {
                         .frame(height: 0)
                     
                     VStack(spacing: 22) {
-                        // Header Greeting & Location
+                        // Header Greeting & Location & Hijri Date
+                        let hijri = hijriManager.getHijriDate()
                         VStack(spacing: 8) {
                             Text("Assalamu Alaikum")
                                 .font(.system(size: 32, weight: .bold, design: .rounded))
@@ -228,10 +242,17 @@ struct HomeView: View {
                             .background(Color.white.opacity(0.2))
                             .clipShape(Capsule())
                             
-                            Text(dateFormatter.string(from: Date()))
-                                .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.85))
-                                .padding(.top, 2)
+                            VStack(spacing: 3) {
+                                Text(currentDateFormatted)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white.opacity(0.85))
+
+                                Text(hijri.formattedEn)
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.white.opacity(0.95))
+                            }
+                            .padding(.top, 2)
                         }
                         .padding(.top, 10)
                         
@@ -259,43 +280,37 @@ struct HomeView: View {
                                 .shadow(color: .black.opacity(0.15), radius: 4)
                                 .onAppear { animatePulse = true }
                                 
-                                Image(systemName: prayerIcon)
-                                    .font(.system(size: 64))
-                                    .foregroundStyle(.white)
-                                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-                                
                                 VStack(spacing: 4) {
-                                    Text("\(name) Prayer")
-                                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                                    Text(name)
+                                        .font(.system(size: 42, weight: .bold, design: .rounded))
                                         .foregroundStyle(.white)
                                     
-                                    Text(minsAgo == 0 ? "Started just now (\(time))" : "Started \(minsAgo) min\(minsAgo == 1 ? "" : "s") ago (\(time))")
+                                    Text("Began \(time) • \(minsAgo)m ago")
                                         .font(.subheadline)
-                                        .fontWeight(.medium)
                                         .foregroundStyle(.white.opacity(0.9))
                                 }
                                 
                             case .upcoming(let name, let time):
-                                Text("Next Prayer")
-                                    .font(.subheadline)
-                                    .fontWeight(.bold)
-                                    .textCase(.uppercase)
-                                    .foregroundStyle(.white.opacity(0.8))
-                                    .tracking(1.2)
-                                
-                                Image(systemName: prayerIcon)
-                                    .font(.system(size: 68))
-                                    .foregroundStyle(.white)
-                                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                                HStack(spacing: 6) {
+                                    Image(systemName: "clock.fill")
+                                        .font(.caption2)
+                                    Text("UPCOMING PRAYER")
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                }
+                                .foregroundStyle(.white.opacity(0.9))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 5)
+                                .background(Color.white.opacity(0.15))
+                                .clipShape(Capsule())
                                 
                                 VStack(spacing: 4) {
                                     Text(name)
-                                        .font(.system(size: 38, weight: .bold, design: .rounded))
+                                        .font(.system(size: 42, weight: .bold, design: .rounded))
                                         .foregroundStyle(.white)
                                     
                                     Text(time)
-                                        .font(.title2)
-                                        .fontWeight(.semibold)
+                                        .font(.system(size: 28, weight: .medium, design: .rounded))
                                         .foregroundStyle(.white.opacity(0.95))
                                 }
                             }
@@ -343,8 +358,8 @@ struct HomeView: View {
                         .shadow(color: Color.black.opacity(0.18), radius: 18, x: 0, y: 8)
                         .padding(.horizontal, 20)
                         
-                        // Sleek Quick Action Cards Bar (Qibla, Tasbih, Quran)
-                        HStack(spacing: 12) {
+                        // Sleek Quick Action Cards Bar (Qibla, Duas, Tasbih, Quran)
+                        HStack(spacing: 10) {
                             QuickActionCard(
                                 title: "Qibla",
                                 subtitle: "Direction",
@@ -354,6 +369,16 @@ struct HomeView: View {
                                 triggerHaptic()
                                 selectedTab = 2
                             }
+
+                            QuickActionCard(
+                                title: "Duas",
+                                subtitle: "Daily",
+                                icon: "hands.sparkles.fill",
+                                color: .purple
+                            ) {
+                                triggerHaptic()
+                                selectedTab = 3
+                            }
                             
                             QuickActionCard(
                                 title: "Tasbih",
@@ -362,7 +387,7 @@ struct HomeView: View {
                                 color: .teal
                             ) {
                                 triggerHaptic()
-                                selectedTab = 3
+                                selectedTab = 4
                             }
                             
                             QuickActionCard(
@@ -372,10 +397,10 @@ struct HomeView: View {
                                 color: Color(red: 0.2, green: 0.8, blue: 0.5)
                             ) {
                                 triggerHaptic()
-                                selectedTab = 4
+                                selectedTab = 5
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 16)
                         .padding(.bottom, 24)
                     }
                 }
@@ -409,11 +434,11 @@ struct QuickActionCard: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 ZStack {
                     Circle()
                         .fill(color.opacity(0.22))
-                        .frame(width: 48, height: 48)
+                        .frame(width: 44, height: 44)
                     
                     Image(systemName: icon)
                         .font(.title3)
@@ -422,23 +447,23 @@ struct QuickActionCard: View {
                 
                 VStack(spacing: 2) {
                     Text(title)
-                        .font(.headline)
+                        .font(.subheadline)
                         .fontWeight(.bold)
                         .foregroundStyle(.white)
                     
                     Text(subtitle)
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(.white.opacity(0.8))
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, 14)
             .background(
                 ZStack {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(.ultraThinMaterial)
                     
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.45), .white.opacity(0.12)],
@@ -449,7 +474,7 @@ struct QuickActionCard: View {
                         )
                 }
             )
-            .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(ScaleButtonStyle())
     }

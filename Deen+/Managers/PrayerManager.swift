@@ -185,6 +185,23 @@ class PrayerManager: ObservableObject {
 
     // MARK: - Offline Calculation
 
+    /// Pure offline calculation helper that computes `PrayerTimes` for any date and coordinates
+    public func timesForDate(
+        _ date: Date,
+        latitude: Double? = nil,
+        longitude: Double? = nil
+    ) -> PrayerTimes {
+        let lat = latitude ?? (lastFetchedLat != 0 ? lastFetchedLat : fallbackLat)
+        let lon = longitude ?? (lastFetchedLon != 0 ? lastFetchedLon : fallbackLon)
+
+        let pt = PrayTimes(
+            method: calculationMethod,
+            juristic: juristicMethod,
+            highLats: highLatsMethod
+        )
+        return pt.calculate(for: [lat, lon], date: date)
+    }
+
     /// Calculates prayer times completely offline using astronomical algorithms.
     /// Synchronously computes times, updates `@Published var prayerTimes`, caches results, and schedules notifications.
     public func calculatePrayerTimes(
