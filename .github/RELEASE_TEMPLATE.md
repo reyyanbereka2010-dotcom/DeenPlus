@@ -1,4 +1,4 @@
-## Deen+ v1.1.1
+## Deen+ v1.1.2
 
 ### What's New:
 - **Navigation & Back Button Fixes**: Fixed back button navigation when viewing surahs from Bookmarks and Downloads.
