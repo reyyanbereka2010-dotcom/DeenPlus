@@ -1,14 +1,14 @@
 # Deen+ 🌙
 
-A modern, offline-first iOS Islamic companion app built natively with SwiftUI.
+A iOS Islamic prayer app built with SwiftUI.
 
 ---
 
 ## Features
 
-- **Offline Prayer Times**: Pure mathematical & astronomical calculations performed locally on-device. Supports 13 worldwide calculation authorities (ISNA, MWL, Makkah, Egypt, Karachi, Singapore, Dubai, etc.), multiple Asr schools (Standard / Hanafi), and high-latitude adjustment rules.
-- **Auto-Settings**: Automatically chooses optimal calculation parameters and Asr schools based on device location and locale.
-- **Adhan & Notifications**: Local prayer notifications with customizable reminder timings and custom adhan audio.
+- **Offline Prayer Times**: Mathematical & astronomical calculations locally on-device.
+- 13 worldwide calculation authorities (ISNA, MWL, Makkah, Egypt, Karachi, Singapore, Dubai, etc.), multiple Asr schools (Standard / Hanafi), and high-latitude adjustment rules.
+- **Adhan & Notifications**: Local prayer notifications with customizable reminder and custom adhan audio.
 - **Complete Holy Quran**:
   - Offline surah reading with Uthmanic Hafs script.
   - Surah audio recitation and background audio playback.
@@ -19,7 +19,7 @@ A modern, offline-first iOS Islamic companion app built natively with SwiftUI.
 
 ---
 
-## Tech Stack & Architecture
+## Architecture
 
 - **Platform**: iOS 17.0+
 - **Language**: Swift 5.9+
@@ -53,18 +53,22 @@ Deen+/
 ---
 
 ## Getting Started
+**Method 1**
 
-1. Clone this repository:
+1. clone this repository:
    ```bash
    git clone https://github.com/<your-username>/<your-repo-name>.git
    cd <your-repo-name>
    ```
-2. Open `Deen+.xcodeproj` in Xcode 15 or later:
+2. open `Deen+.xcodeproj` in Xcode 15 or later:
    ```bash
    open Deen+.xcodeproj
    ```
-3. Select an iOS Simulator or connected device and hit **Run** (`Cmd + R`).
+3. select an iOS Simulator or connected device and hit **Run** (`Cmd + R`).
 
+**Method 2** (need a PC if on iOS 26-26.6.1)
+1. download ipa from [releases](https://github.com/reyyanbereka2010-dotcom/DeenPlus/releases)
+2. sideload using [this](https://docs.sidestore.io/docs/installation/install) guide
 ---
 
 ## License
