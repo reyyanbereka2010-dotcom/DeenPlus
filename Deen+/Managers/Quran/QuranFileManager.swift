@@ -62,7 +62,8 @@ final class QuranFileManager {
 
     func saveSurah(
         id: Int,
-        verses: [QuranVerse]
+        verses: [QuranVerse],
+        completion: ((Bool) -> Void)? = nil
     ) {
 
         let name = SurahMetadata.get(id).englishName
@@ -73,6 +74,7 @@ final class QuranFileManager {
                 name: name,
                 verses: verses
             )
+            var success = false
             do {
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.withoutEscapingSlashes]
@@ -81,6 +83,7 @@ final class QuranFileManager {
                     to: self.fileURL(for: id),
                     options: [.atomic, .completeFileProtection]
                 )
+                success = true
                 #if DEBUG
                 print("Successfully saved Surah \(id) (\(name)) to disk.")
                 #endif
@@ -88,6 +91,12 @@ final class QuranFileManager {
                 #if DEBUG
                 print("QuranFileManager Save Error for Surah \(id):", error)
                 #endif
+            }
+
+            if let completion = completion {
+                DispatchQueue.main.async {
+                    completion(success)
+                }
             }
         }
     }
@@ -178,7 +187,7 @@ final class QuranFileManager {
 
     // MARK: - Delete All
 
-    func deleteAll() {
+    func deleteAll(completion: (() -> Void)? = nil) {
 
         ioQueue.async {
             do {
@@ -196,6 +205,12 @@ final class QuranFileManager {
                 #if DEBUG
                 print("QuranFileManager Delete All Error:", error)
                 #endif
+            }
+
+            if let completion = completion {
+                DispatchQueue.main.async {
+                    completion()
+                }
             }
         }
     }

@@ -153,7 +153,7 @@ struct SurahReaderView: View {
                             isDownloaded = false
                         } else {
                             Task {
-                                let result = quranManager.downloadSurah(surah)
+                                let result = await quranManager.downloadSurah(surah)
                                 await MainActor.run { isDownloaded = result }
                             }
                         }

@@ -76,13 +76,15 @@ class QuranManager: ObservableObject {
         isLoading = false
     }
 
-    @discardableResult
-    func downloadSurah(_ surah: Int) -> Bool {
+    func downloadSurah(_ surah: Int) async -> Bool {
         guard !verses.isEmpty else {
             return false
         }
 
-        QuranFileManager.shared.saveSurah(id: surah, verses: verses)
-        return QuranFileManager.shared.isDownloaded(id: surah)
+        return await withCheckedContinuation { continuation in
+            QuranFileManager.shared.saveSurah(id: surah, verses: verses) { success in
+                continuation.resume(returning: success)
+            }
+        }
     }
 }

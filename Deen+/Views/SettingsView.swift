@@ -206,9 +206,9 @@ struct SettingsView: View {
                             role: .destructive
                         ) {
 
-                            QuranFileManager.shared.deleteAll()
-
-                            refreshCounts()
+                            QuranFileManager.shared.deleteAll {
+                                refreshCounts()
+                            }
 
                         }
 

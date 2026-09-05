@@ -185,9 +185,9 @@ struct DownloadsView: View {
                 role: .destructive
             ) {
 
-                QuranFileManager.shared.deleteAll()
-
-                refreshDownloads()
+                QuranFileManager.shared.deleteAll {
+                    refreshDownloads()
+                }
 
             }
 
