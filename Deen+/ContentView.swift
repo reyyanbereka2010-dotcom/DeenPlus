@@ -27,9 +27,9 @@ struct ContentView: View {
                 }
                 .tag(1)
 
-            QiblaView()
+            QuranView()
                 .tabItem {
-                    Label("Qibla", systemImage: "location.north.fill")
+                    Label("Quran", systemImage: "book.fill")
                 }
                 .tag(2)
 
@@ -39,15 +39,15 @@ struct ContentView: View {
                 }
                 .tag(3)
 
-            TasbihView()
+            QiblaView()
                 .tabItem {
-                    Label("Tasbih", systemImage: "circle.circle.fill")
+                    Label("Qibla", systemImage: "location.north.fill")
                 }
                 .tag(4)
 
-            QuranView()
+            TasbihView()
                 .tabItem {
-                    Label("Quran", systemImage: "book.fill")
+                    Label("Tasbih", systemImage: "circle.circle.fill")
                 }
                 .tag(5)
 

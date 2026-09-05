@@ -131,22 +131,7 @@ struct SurahReaderView: View {
             }
             .navigationTitle(surahName ?? SurahMetadata.get(surah).englishName)
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Back")
-                                .font(.body)
-                        }
-                        .foregroundStyle(.green)
-                    }
-                    .accessibilityLabel("Go back")
-                }
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     Button {
                         recitationPlayer.togglePlay(for: surah)

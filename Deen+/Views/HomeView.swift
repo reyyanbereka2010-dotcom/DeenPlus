@@ -358,13 +358,13 @@ struct HomeView: View {
                         .shadow(color: Color.black.opacity(0.18), radius: 18, x: 0, y: 8)
                         .padding(.horizontal, 20)
                         
-                        // Sleek Quick Action Cards Bar (Qibla, Duas, Tasbih, Quran)
+                        // Sleek Quick Action Cards Bar (Quran, Duas, Qibla, Tasbih)
                         HStack(spacing: 10) {
                             QuickActionCard(
-                                title: "Qibla",
-                                subtitle: "Direction",
-                                icon: "location.north.fill",
-                                color: .green
+                                title: "Quran",
+                                subtitle: "Read",
+                                icon: "book.fill",
+                                color: Color(red: 0.2, green: 0.8, blue: 0.5)
                             ) {
                                 triggerHaptic()
                                 selectedTab = 2
@@ -381,20 +381,20 @@ struct HomeView: View {
                             }
                             
                             QuickActionCard(
-                                title: "Tasbih",
-                                subtitle: "Counter",
-                                icon: "circle.circle.fill",
-                                color: .teal
+                                title: "Qibla",
+                                subtitle: "Direction",
+                                icon: "location.north.fill",
+                                color: .green
                             ) {
                                 triggerHaptic()
                                 selectedTab = 4
                             }
-                            
+
                             QuickActionCard(
-                                title: "Quran",
-                                subtitle: "Read",
-                                icon: "book.fill",
-                                color: Color(red: 0.2, green: 0.8, blue: 0.5)
+                                title: "Tasbih",
+                                subtitle: "Counter",
+                                icon: "circle.circle.fill",
+                                color: .teal
                             ) {
                                 triggerHaptic()
                                 selectedTab = 5

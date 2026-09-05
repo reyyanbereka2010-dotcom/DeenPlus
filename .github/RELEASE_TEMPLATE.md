@@ -1,11 +1,10 @@
-## Deen+ v1.1.3
+## Deen+ v1.1.4
 
 ### What's New:
-- **Dynamic Monthly Prayer Calendar**: Resolved the issue where calendar times were not properly updating when switching between previous and upcoming months. Timings now dynamically recalculate using your precise location with instant astronomical equations.
-- **Enhanced Calendar Transitions**: Smooth animated month switcher with an automatic "Today" jumper that centers on the current date.
-- **Quran Navigation**: Back buttons fixed when viewing surahs from Downloads or Bookmarks.
-- **Qibla Calibration**: Dedicated reset/recalculate button on the compass screen.
-- **Polished Tab Bar**: Clean green tab accents and consistent background styling across light and dark modes.
+- **Streamlined Tab Bar**: Reorganized the menu tabs to put Quran and Duas front and center, with Settings properly positioned on the far right under More/Settings.
+- **Fixed Quran Reader Navigation**: Removed the duplicate back button when opening a Surah so navigation remains clean and native across Quran, Bookmarks, and Downloads.
+- **Synchronized Home Quick Actions**: Updated quick action shortcuts on the Home dashboard to match the new tab structure.
+- **Dynamic Monthly Calendar**: Prayer schedules dynamically adapt and calculate precisely across all months.
 
 ### Sideloading Instructions:
 1. Download `Deen+.ipa` below.
