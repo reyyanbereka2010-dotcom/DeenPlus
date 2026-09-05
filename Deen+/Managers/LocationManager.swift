@@ -36,6 +36,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         }
     }
 
+    /// Explicitly forces a fresh GPS coordinate fix and reverse geocoding
+    func recalculateLocation() {
+        manager.stopUpdatingLocation()
+        manager.requestLocation()
+    }
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
 

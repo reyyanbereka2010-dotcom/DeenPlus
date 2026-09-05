@@ -18,6 +18,7 @@ struct QiblaView: View {
     @EnvironmentObject var qiblaManager: QiblaManager
     @EnvironmentObject var locationManager: LocationManager
     @State private var hapticsEngine: CHHapticEngine?
+    @State private var isRecalculating = false
     
     private func playQiblaReachedHaptic() {
         guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
@@ -40,6 +41,24 @@ struct QiblaView: View {
         }
     }
 
+    private func recalculateLocationAndQibla() {
+        #if canImport(UIKit)
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+        #endif
+        
+        isRecalculating = true
+        locationManager.recalculateLocation()
+        
+        let lat = locationManager.latitude != 0 ? locationManager.latitude : 21.4225
+        let lon = locationManager.longitude != 0 ? locationManager.longitude : 39.8262
+        qiblaManager.recalculateQibla(latitude: lat, longitude: lon)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            isRecalculating = false
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -48,16 +67,41 @@ struct QiblaView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 28) {
-                        // Title Header
-                        VStack(spacing: 6) {
-                            Text("Qibla Finder")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundStyle(.primary)
+                        // Title Header with Reset / Recalculate
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Qibla Finder")
+                                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                
+                                Text("Point your phone towards the Kaaba")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
                             
-                            Text("Point your phone towards the Kaaba")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                            Spacer()
+                            
+                            Button {
+                                recalculateLocationAndQibla()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .rotationEffect(.degrees(isRecalculating ? 360 : 0))
+                                        .animation(isRecalculating ? .linear(duration: 0.8).repeatForever(autoreverses: false) : .default, value: isRecalculating)
+                                    Text("Reset")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Color.green.opacity(0.12))
+                                .foregroundStyle(.green)
+                                .clipShape(Capsule())
+                            }
+                            .disabled(isRecalculating)
+                            .accessibilityLabel("Recalculate Qibla and reset GPS location")
                         }
+                        .padding(.horizontal, 20)
                         .padding(.top, 12)
                         
                         // Main Compass Arrow Card

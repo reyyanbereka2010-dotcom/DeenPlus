@@ -22,6 +22,7 @@ struct DhikrPreset: Identifiable, Hashable {
 struct TasbihView: View {
     
     @AppStorage("tasbih_total_count") private var totalCount: Int = 0
+    @AppStorage("tasbih_haptic_feedback") private var hapticFeedbackEnabled: Bool = true
     @State private var currentCount: Int = 0
     @State private var targetCount: Int = 33
     @State private var selectedPresetIndex: Int = 0
@@ -273,6 +274,7 @@ struct TasbihView: View {
     
     // MARK: - Rich Haptics
     private func triggerTapHaptic() {
+        guard hapticFeedbackEnabled else { return }
         #if canImport(UIKit)
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()

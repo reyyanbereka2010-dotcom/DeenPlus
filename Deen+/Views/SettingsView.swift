@@ -22,6 +22,15 @@ struct SettingsView: View {
     @AppStorage("prayerNotificationsEnabled")
     private var prayerNotificationsEnabled: Bool = false
 
+    @AppStorage("tasbih_haptic_feedback")
+    private var tasbihHapticEnabled: Bool = true
+
+    @AppStorage("quranArabicFontSize")
+    private var quranArabicFontSize: Double = 26
+
+    @AppStorage("quranShowTranslation")
+    private var quranShowTranslation: Bool = true
+
     var body: some View {
 
         NavigationStack {
@@ -123,6 +132,31 @@ struct SettingsView: View {
                     } else {
                         Text("Calculated completely on-device using astronomical algorithms. Works anywhere without an internet connection.")
                     }
+                }
+
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Default Arabic Font Size")
+                            Spacer()
+                            Text("\(Int(quranArabicFontSize)) pt")
+                                .foregroundStyle(.secondary)
+                        }
+                        Slider(value: $quranArabicFontSize, in: 18...38, step: 2)
+                    }
+                    .padding(.vertical, 4)
+
+                    Toggle("Show English Translation", isOn: $quranShowTranslation)
+                } header: {
+                    Text("Quran Display")
+                }
+
+                Section {
+                    Toggle("Vibration / Haptic Feedback", isOn: $tasbihHapticEnabled)
+                } header: {
+                    Text("Tasbih Counter")
+                } footer: {
+                    Text("Provide gentle tactile haptic feedback on every dhikr bead tap.")
                 }
 
                 Section {
@@ -282,7 +316,7 @@ struct SettingsView: View {
 
                         Spacer()
 
-                        Text("1.0")
+                        Text("1.0.0")
                             .foregroundStyle(.secondary)
 
                     }
@@ -296,6 +330,18 @@ struct SettingsView: View {
                         Text("Reyyan Bereka")
                             .foregroundStyle(.secondary)
 
+                    }
+
+                    if let url = URL(string: "https://github.com/reyyanbereka2010-dotcom/DeenPlus") {
+                        Link(destination: url) {
+                            HStack {
+                                Label("Source Code & Releases", systemImage: "chevron.left.forwardslash.chevron.right")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
 
                 } header: {

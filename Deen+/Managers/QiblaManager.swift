@@ -70,6 +70,15 @@ class QiblaManager: NSObject, ObservableObject {
         abs(arrowRotation) <= 5
     }
 
+    /// Recalculates Qibla direction, resets heading tracking, and re-computes azimuth
+    func recalculateQibla(latitude: Double, longitude: Double) {
+        if CLLocationManager.headingAvailable() {
+            locationManager.stopUpdatingHeading()
+            locationManager.startUpdatingHeading()
+        }
+        calculateQibla(latitude: latitude, longitude: longitude)
+    }
+
     func calculateQibla(latitude: Double, longitude: Double) {
         guard latitude != 0 || longitude != 0 else {
             // Fallback to Kaaba calculation
