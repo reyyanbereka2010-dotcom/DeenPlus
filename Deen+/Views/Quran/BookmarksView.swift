@@ -16,14 +16,14 @@ struct BookmarksView: View {
                 let arabic = SurahNames.name(for: surahNum)
                 let ayahNum = parseAyahNumber(from: verse.verseKey)
 
-                NavigationLink(
-                    destination: SurahReaderView(
+                NavigationLink {
+                    SurahReaderView(
                         surah: surahNum,
                         arabicName: arabic,
                         highlightVerse: ayahNum,
                         resumeVerse: ayahNum
                     )
-                ) {
+                } label: {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
                             Text(

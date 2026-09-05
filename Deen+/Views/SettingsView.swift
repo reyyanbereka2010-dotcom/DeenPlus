@@ -316,7 +316,7 @@ struct SettingsView: View {
 
                         Spacer()
 
-                        Text("1.0.0")
+                        Text("1.1.0 (2)")
                             .foregroundStyle(.secondary)
 
                     }

@@ -57,10 +57,17 @@ struct ContentView: View {
                 }
                 .tag(6)
         }
+        .tint(.green)
         .toolbar(
             hideTabBar ? .hidden : .visible,
             for: .tabBar
         )
+        .onAppear {
+            let appearance = UITabBarAppearance()
+            appearance.configureWithDefaultBackground()
+            UITabBar.appearance().standardAppearance = appearance
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
     }
 }
 

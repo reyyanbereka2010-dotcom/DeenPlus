@@ -26,14 +26,12 @@ struct DownloadsView: View {
                     let metadata = SurahMetadata.get(surahNumber)
 
 
-                    NavigationLink(
-
-                        destination: SurahReaderView(
+                    NavigationLink {
+                        SurahReaderView(
                             surah: surahNumber,
                             arabicName: arabic
                         )
-
-                    ) {
+                    } label: {
 
                         HStack {
 
