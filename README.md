@@ -1,4 +1,6 @@
-# Deen+ 🌙
+# Deen+ 
+<img width="1024" height="1024" alt="Deen+ App Icon" src="https://github.com/user-attachments/assets/3e3a15be-eb28-49e4-9412-c4d6da69b442" />
+
 
 A iOS Islamic prayer app built with SwiftUI.
 
@@ -14,14 +16,14 @@ A iOS Islamic prayer app built with SwiftUI.
   - Surah audio recitation and background audio playback.
   - Download surahs for full offline access.
   - Verse bookmarks and reading progress tracking.
-- **Qibla Compass**: Real-time compass heading directly to the Kaaba in Makkah.
-- **Digital Tasbih**: Haptic-feedback dhikr counter with custom targets and preset supplications.
+- **Qibla Finder**
+- **Digital Tasbih**: Haptic-feedback dhikr counter
 
 ---
 
 ## Architecture
 
-- **Platform**: iOS 17.0+
+- **Platform**: iOS 26.0+
 - **Language**: Swift 5.9+
 - **Framework**: SwiftUI, CoreLocation, UserNotifications, AVFoundation, Combine
 - **Architecture**: MVVM with ObservableObject managers
