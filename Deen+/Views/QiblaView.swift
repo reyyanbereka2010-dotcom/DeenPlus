@@ -19,6 +19,8 @@ struct QiblaView: View {
     @EnvironmentObject var locationManager: LocationManager
     @State private var hapticsEngine: CHHapticEngine?
     @State private var isRecalculating = false
+    @State private var wasRecentlyReset = false
+    @State private var calibrationSpin: Double = 0
     
     private func playQiblaReachedHaptic() {
         guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
@@ -43,11 +45,18 @@ struct QiblaView: View {
 
     private func recalculateLocationAndQibla() {
         #if canImport(UIKit)
-        let impact = UIImpactFeedbackGenerator(style: .medium)
-        impact.impactOccurred()
+        let notify = UINotificationFeedbackGenerator()
+        notify.notificationOccurred(.success)
         #endif
         
         isRecalculating = true
+        wasRecentlyReset = true
+        
+        // Visually animate compass needle around in a dynamic calibration sweep
+        withAnimation(.spring(response: 0.75, dampingFraction: 0.65)) {
+            calibrationSpin += 360
+        }
+        
         locationManager.recalculateLocation()
         
         let lat = locationManager.latitude != 0 ? locationManager.latitude : 21.4225
@@ -55,7 +64,15 @@ struct QiblaView: View {
         qiblaManager.recalculateQibla(latitude: lat, longitude: lon)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            isRecalculating = false
+            withAnimation(.easeInOut(duration: 0.3)) {
+                isRecalculating = false
+            }
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                wasRecentlyReset = false
+            }
         }
     }
 
@@ -85,16 +102,24 @@ struct QiblaView: View {
                                 recalculateLocationAndQibla()
                             } label: {
                                 HStack(spacing: 6) {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                        .rotationEffect(.degrees(isRecalculating ? 360 : 0))
-                                        .animation(isRecalculating ? .linear(duration: 0.8).repeatForever(autoreverses: false) : .default, value: isRecalculating)
-                                    Text("Reset")
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
+                                    if wasRecentlyReset && !isRecalculating {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(.green)
+                                        Text("Calibrated")
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                    } else {
+                                        Image(systemName: "arrow.triangle.2.circlepath")
+                                            .rotationEffect(.degrees(isRecalculating ? 360 : 0))
+                                            .animation(isRecalculating ? .linear(duration: 0.8).repeatForever(autoreverses: false) : .default, value: isRecalculating)
+                                        Text(isRecalculating ? "Calibrating" : "Reset")
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                    }
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
-                                .background(Color.green.opacity(0.12))
+                                .background(wasRecentlyReset ? Color.green.opacity(0.18) : Color.green.opacity(0.12))
                                 .foregroundStyle(.green)
                                 .clipShape(Capsule())
                             }
@@ -103,6 +128,25 @@ struct QiblaView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 12)
+                        
+                        // Recalibrated Feedback Toast
+                        if wasRecentlyReset {
+                            HStack(spacing: 8) {
+                                Image(systemName: isRecalculating ? "sparkles" : "checkmark.circle.fill")
+                                    .font(.footnote)
+                                    .foregroundStyle(.green)
+                                Text(isRecalculating ? "Recalibrating GPS & Compass Sensors..." : "Compass & GPS Location Recalibrated ✓")
+                                    .font(.footnote)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.primary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(Capsule())
+                            .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        }
                         
                         // Main Compass Arrow Card
                         VStack(spacing: 22) {
@@ -113,10 +157,10 @@ struct QiblaView: View {
                                 
                                 Image(systemName: "location.north.fill")
                                     .font(.system(size: 110, weight: .bold))
-                                    .rotationEffect(.degrees(qiblaManager.displayedRotation))
+                                    .rotationEffect(.degrees(qiblaManager.displayedRotation + calibrationSpin))
                                     .foregroundStyle(qiblaManager.isFacingQibla ? .green : .primary)
                                     .shadow(color: qiblaManager.isFacingQibla ? .green.opacity(0.4) : .black.opacity(0.1), radius: 10)
-                                    .animation(.spring(response: 0.4, dampingFraction: 0.7), value: qiblaManager.displayedRotation)
+                                    .animation(.spring(response: 0.4, dampingFraction: 0.7), value: qiblaManager.displayedRotation + calibrationSpin)
                                     .accessibilityLabel(qiblaManager.isFacingQibla ? "Facing Qibla" : "Turn towards Qibla")
                                     .accessibilityValue("Direction: \(Int(qiblaManager.qiblaDirection)) degrees")
                             }
@@ -195,10 +239,17 @@ struct QiblaView: View {
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                 Spacer()
-                                Text(locationManager.latitude != 0 ? "Location Detected ✓" : "Searching...")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(locationManager.latitude != 0 ? .green : .orange)
+                                if locationManager.authorizationStatus == .denied || locationManager.authorizationStatus == .restricted {
+                                    Text("Location Access Denied")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.red)
+                                } else {
+                                    Text(locationManager.latitude != 0 ? "Location Detected ✓" : "Searching...")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(locationManager.latitude != 0 ? .green : .orange)
+                                }
                             }
                         }
                         .padding(18)

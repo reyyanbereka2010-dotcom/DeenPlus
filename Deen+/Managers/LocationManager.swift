@@ -14,6 +14,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var countryCode: String?
     @Published var latitude: Double
     @Published var longitude: Double
+    @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
 
     override init() {
         // Load cached city, country code, and coordinates for offline support
@@ -26,6 +27,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
 
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
+        self.authorizationStatus = manager.authorizationStatus
     }
 
     func requestLocation() {
@@ -38,8 +40,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
 
     /// Explicitly forces a fresh GPS coordinate fix and reverse geocoding
     func recalculateLocation() {
-        manager.stopUpdatingLocation()
-        manager.requestLocation()
+        if manager.authorizationStatus == .notDetermined {
+            manager.requestWhenInUseAuthorization()
+        } else {
+            manager.stopUpdatingLocation()
+            manager.requestLocation()
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -101,6 +107,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        DispatchQueue.main.async {
+            self.authorizationStatus = manager.authorizationStatus
+        }
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
             manager.requestLocation()
