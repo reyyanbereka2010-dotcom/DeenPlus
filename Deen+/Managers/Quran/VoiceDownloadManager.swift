@@ -36,38 +36,65 @@ final class VoiceDownloadManager: ObservableObject {
     }
 
     private init() {
+        cleanLegacyDownloadsIfNeeded()
         refreshDownloadedIndex()
+    }
+
+    /// Clean legacy monolithic surah MP3 files that prevented per-ayah playback
+    private func cleanLegacyDownloadsIfNeeded() {
+        let recitersFolder = baseDownloadsFolder.appendingPathComponent("reciters", isDirectory: true)
+        if let reciterDirs = try? fileManager.contentsOfDirectory(at: recitersFolder, includingPropertiesForKeys: nil) {
+            for dir in reciterDirs {
+                if let files = try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) {
+                    for file in files where file.pathExtension == "mp3" {
+                        try? fileManager.removeItem(at: file)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Local Path Helpers
 
-    func reciterSurahURL(reciter: Reciter, surahId: Int) -> URL {
+    func reciterSurahFolder(reciter: Reciter, surahId: Int) -> URL {
         let folder = baseDownloadsFolder
             .appendingPathComponent("reciters", isDirectory: true)
             .appendingPathComponent(reciter.rawValue, isDirectory: true)
+            .appendingPathComponent("\(surahId)", isDirectory: true)
         if !fileManager.fileExists(atPath: folder.path) {
             try? fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
         }
-        return folder.appendingPathComponent("\(surahId).mp3")
+        return folder
     }
 
-    func translationSurahURL(voice: TranslationVoice, surahId: Int) -> URL {
-        let folder = baseDownloadsFolder
-            .appendingPathComponent("translations", isDirectory: true)
-            .appendingPathComponent(voice.rawValue, isDirectory: true)
-        if !fileManager.fileExists(atPath: folder.path) {
-            try? fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
-        }
-        return folder.appendingPathComponent("\(surahId).mp3")
+    func reciterAyahURL(reciter: Reciter, surahId: Int, ayahNumber: Int) -> URL {
+        reciterSurahFolder(reciter: reciter, surahId: surahId)
+            .appendingPathComponent("\(ayahNumber).mp3")
     }
 
-    func localSurahAudioURL(reciter: Reciter, surahId: Int) -> URL? {
-        let url = reciterSurahURL(reciter: reciter, surahId: surahId)
+    func localAyahAudioURL(reciter: Reciter, surahId: Int, ayahNumber: Int) -> URL? {
+        let url = reciterAyahURL(reciter: reciter, surahId: surahId, ayahNumber: ayahNumber)
         return fileManager.fileExists(atPath: url.path) ? url : nil
     }
 
-    func localTranslationAudioURL(voice: TranslationVoice, surahId: Int) -> URL? {
-        let url = translationSurahURL(voice: voice, surahId: surahId)
+    func translationAyahFolder(voice: TranslationVoice, surahId: Int) -> URL {
+        let folder = baseDownloadsFolder
+            .appendingPathComponent("translations", isDirectory: true)
+            .appendingPathComponent(voice.rawValue, isDirectory: true)
+            .appendingPathComponent("\(surahId)", isDirectory: true)
+        if !fileManager.fileExists(atPath: folder.path) {
+            try? fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+        }
+        return folder
+    }
+
+    func translationAyahURL(voice: TranslationVoice, surahId: Int, ayahNumber: Int) -> URL {
+        translationAyahFolder(voice: voice, surahId: surahId)
+            .appendingPathComponent("\(ayahNumber).mp3")
+    }
+
+    func localTranslationAudioURL(voice: TranslationVoice, surahId: Int, ayahNumber: Int = 1) -> URL? {
+        let url = translationAyahURL(voice: voice, surahId: surahId, ayahNumber: ayahNumber)
         return fileManager.fileExists(atPath: url.path) ? url : nil
     }
 
@@ -104,22 +131,33 @@ final class VoiceDownloadManager: ObservableObject {
                     continue
                 }
 
-                guard let remoteURL = reciter.surahURL(surahId: surahId) else { continue }
-                let destURL = self.reciterSurahURL(reciter: reciter, surahId: surahId)
+                let totalAyahs = SurahMetadata.get(surahId).totalAyahs
+                guard totalAyahs > 0 else { continue }
 
-                do {
-                    let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
-                    if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
-                        if FileManager.default.fileExists(atPath: destURL.path) {
-                            try? FileManager.default.removeItem(at: destURL)
+                var successAyahs = 0
+                for ayah in 1...totalAyahs {
+                    if Task.isCancelled { break }
+                    guard let remoteURL = reciter.ayahURL(surahId: surahId, ayahNumber: ayah) else { continue }
+                    let destURL = self.reciterAyahURL(reciter: reciter, surahId: surahId, ayahNumber: ayah)
+
+                    do {
+                        let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
+                        if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
+                            if FileManager.default.fileExists(atPath: destURL.path) {
+                                try? FileManager.default.removeItem(at: destURL)
+                            }
+                            try FileManager.default.moveItem(at: tempURL, to: destURL)
+                            successAyahs += 1
                         }
-                        try FileManager.default.moveItem(at: tempURL, to: destURL)
-                        self.downloadedSurahKeys.insert("reciter_\(reciter.rawValue)_\(surahId)")
+                    } catch {
+                        #if DEBUG
+                        print("Error downloading \(surahId):\(ayah):", error)
+                        #endif
                     }
-                } catch {
-                    #if DEBUG
-                    print("Download error for surah \(surahId):", error)
-                    #endif
+                }
+
+                if successAyahs > 0 {
+                    self.downloadedSurahKeys.insert("reciter_\(reciter.rawValue)_\(surahId)")
                 }
             }
 
@@ -140,62 +178,73 @@ final class VoiceDownloadManager: ObservableObject {
 
     func downloadReciterSurah(reciter: Reciter, surahId: Int) {
         let key = "reciter_\(reciter.rawValue)_\(surahId)"
-        guard !activeDownloads.contains(key),
-              let remoteURL = reciter.surahURL(surahId: surahId) else { return }
+        guard !activeDownloads.contains(key) else { return }
 
         activeDownloads.insert(key)
         downloadProgress[key] = 0.05
 
-        let destURL = reciterSurahURL(reciter: reciter, surahId: surahId)
-
+        let totalAyahs = SurahMetadata.get(surahId).totalAyahs
         Task.detached(priority: .userInitiated) {
-            do {
-                let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
-                guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-                    await self.finishDownload(key: key, success: false)
-                    return
-                }
+            var successCount = 0
+            for ayah in 1...totalAyahs {
+                if Task.isCancelled { break }
+                guard let remoteURL = reciter.ayahURL(surahId: surahId, ayahNumber: ayah) else { continue }
+                let destURL = await self.reciterAyahURL(reciter: reciter, surahId: surahId, ayahNumber: ayah)
 
-                if FileManager.default.fileExists(atPath: destURL.path) {
-                    try? FileManager.default.removeItem(at: destURL)
+                do {
+                    let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
+                    if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
+                        if FileManager.default.fileExists(atPath: destURL.path) {
+                            try? FileManager.default.removeItem(at: destURL)
+                        }
+                        try FileManager.default.moveItem(at: tempURL, to: destURL)
+                        successCount += 1
+                    }
+                } catch {
+                    #if DEBUG
+                    print("Error downloading surah \(surahId) ayah \(ayah):", error)
+                    #endif
                 }
-
-                try FileManager.default.moveItem(at: tempURL, to: destURL)
-                await self.finishDownload(key: key, success: true)
-            } catch {
-                await self.finishDownload(key: key, success: false)
+                let progress = Double(ayah) / Double(totalAyahs)
+                await MainActor.run {
+                    self.downloadProgress[key] = progress
+                }
             }
+            await self.finishDownload(key: key, success: successCount > 0)
         }
     }
 
     func downloadTranslationSurah(voice: TranslationVoice, surahId: Int) {
         let key = "translation_\(voice.rawValue)_\(surahId)"
-        // Fall back to Ayah 1 or remote audio stream
-        guard !activeDownloads.contains(key),
-              let remoteURL = voice.audioUrl(surah: surahId, ayah: 1) else { return }
+        guard !activeDownloads.contains(key) else { return }
 
         activeDownloads.insert(key)
         downloadProgress[key] = 0.05
 
-        let destURL = translationSurahURL(voice: voice, surahId: surahId)
-
+        let totalAyahs = SurahMetadata.get(surahId).totalAyahs
         Task.detached(priority: .userInitiated) {
-            do {
-                let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
-                guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-                    await self.finishDownload(key: key, success: false)
-                    return
-                }
+            var successCount = 0
+            for ayah in 1...totalAyahs {
+                if Task.isCancelled { break }
+                guard let remoteURL = voice.audioUrl(surah: surahId, ayah: ayah) else { continue }
+                let destURL = await self.translationAyahURL(voice: voice, surahId: surahId, ayahNumber: ayah)
 
-                if FileManager.default.fileExists(atPath: destURL.path) {
-                    try? FileManager.default.removeItem(at: destURL)
+                do {
+                    let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
+                    if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
+                        if FileManager.default.fileExists(atPath: destURL.path) {
+                            try? FileManager.default.removeItem(at: destURL)
+                        }
+                        try FileManager.default.moveItem(at: tempURL, to: destURL)
+                        successCount += 1
+                    }
+                } catch {}
+                let progress = Double(ayah) / Double(totalAyahs)
+                await MainActor.run {
+                    self.downloadProgress[key] = progress
                 }
-
-                try FileManager.default.moveItem(at: tempURL, to: destURL)
-                await self.finishDownload(key: key, success: true)
-            } catch {
-                await self.finishDownload(key: key, success: false)
             }
+            await self.finishDownload(key: key, success: successCount > 0)
         }
     }
 
@@ -211,14 +260,14 @@ final class VoiceDownloadManager: ObservableObject {
     // MARK: - Deletion & Storage Management
 
     func deleteReciterSurah(reciter: Reciter, surahId: Int) {
-        let url = reciterSurahURL(reciter: reciter, surahId: surahId)
+        let url = reciterSurahFolder(reciter: reciter, surahId: surahId)
         try? fileManager.removeItem(at: url)
         downloadedSurahKeys.remove("reciter_\(reciter.rawValue)_\(surahId)")
         refreshDownloadedIndex()
     }
 
     func deleteTranslationSurah(voice: TranslationVoice, surahId: Int) {
-        let url = translationSurahURL(voice: voice, surahId: surahId)
+        let url = translationAyahFolder(voice: voice, surahId: surahId)
         try? fileManager.removeItem(at: url)
         downloadedSurahKeys.remove("translation_\(voice.rawValue)_\(surahId)")
         refreshDownloadedIndex()
@@ -239,13 +288,17 @@ final class VoiceDownloadManager: ObservableObject {
         if let reciterDirs = try? fileManager.contentsOfDirectory(at: recitersFolder, includingPropertiesForKeys: nil) {
             for dir in reciterDirs {
                 let reciterId = dir.lastPathComponent
-                if let files = try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey]) {
-                    for file in files where file.pathExtension == "mp3" {
-                        let surahStr = file.deletingPathExtension().lastPathComponent
-                        keys.insert("reciter_\(reciterId)_\(surahStr)")
-                        if let attrs = try? fileManager.attributesOfItem(atPath: file.path),
-                           let size = attrs[.size] as? Int64 {
-                            totalBytes += size
+                if let surahDirs = try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) {
+                    for surahDir in surahDirs {
+                        let surahStr = surahDir.lastPathComponent
+                        if let files = try? fileManager.contentsOfDirectory(at: surahDir, includingPropertiesForKeys: [.fileSizeKey]), !files.isEmpty {
+                            keys.insert("reciter_\(reciterId)_\(surahStr)")
+                            for file in files {
+                                if let attrs = try? fileManager.attributesOfItem(atPath: file.path),
+                                   let size = attrs[.size] as? Int64 {
+                                    totalBytes += size
+                                }
+                            }
                         }
                     }
                 }
