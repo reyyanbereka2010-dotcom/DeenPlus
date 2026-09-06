@@ -30,6 +30,8 @@ struct SettingsView: View {
 
     @AppStorage("appTheme")
     private var appTheme = "System"
+    @AppStorage("appAccentColor")
+    private var appAccentColor: String = "emerald"
     @AppStorage("menuBarStyle")
     private var menuBarStyle: String = "pill"
 
@@ -104,6 +106,26 @@ struct SettingsView: View {
 
                 // MARK: - Quran & Audio
                 Section {
+                    NavigationLink {
+                        RecitationSettingsView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.green.opacity(0.15))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "waveform.badge.mic")
+                                    .foregroundStyle(.green)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Recitation & Voice Audio")
+                                    .font(.body.weight(.medium))
+                                Text("Sheikh: \(recitationPlayer.activeReciter.shortName) • Voice: \(translationNarrator.activeVoice.shortName)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                     // Sheikh Selection
                     Picker(selection: $selectedQuranReciter) {
                         ForEach(Reciter.allCases) { reciter in
@@ -336,6 +358,26 @@ struct SettingsView: View {
 
                 // MARK: - Appearance
                 Section {
+                    NavigationLink {
+                        AppearanceSettingsView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.purple.opacity(0.15))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "paintbrush.fill")
+                                    .foregroundStyle(.purple)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Global Theme & Appearance")
+                                    .font(.body.weight(.medium))
+                                Text("App: \(appTheme) • Accent: \(AppAccentColor(rawValue: appAccentColor)?.displayName ?? "Emerald Green")")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                     Picker("Theme", selection: $appTheme) {
                         Text("System").tag("System")
                         Text("Light").tag("Light")

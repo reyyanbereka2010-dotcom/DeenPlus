@@ -148,7 +148,14 @@ final class TranslationNarrator: NSObject, ObservableObject {
         // Pause Arabic recitation if playing to prevent audio conflict
         RecitationPlayer.shared.pause()
 
-        guard let url = activeVoice.audioUrl(surah: surah, ayah: ayah) else {
+        let audioUrl: URL?
+        if let local = VoiceDownloadManager.shared.localTranslationAudioURL(voice: activeVoice, surahId: surah) {
+            audioUrl = local
+        } else {
+            audioUrl = activeVoice.audioUrl(surah: surah, ayah: ayah)
+        }
+
+        guard let url = audioUrl else {
             return
         }
 

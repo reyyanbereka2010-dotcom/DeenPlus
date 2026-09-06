@@ -12,6 +12,12 @@ struct Deen_App: App {
 
     @AppStorage("appTheme")
     private var appTheme = "System"
+    @AppStorage("appAccentColor")
+    private var appAccentColor = "emerald"
+
+    private var accentColor: Color {
+        AppAccentColor(rawValue: appAccentColor)?.color ?? .green
+    }
 
     @StateObject private var locationManager = LocationManager()
     @StateObject private var qiblaManager = QiblaManager()
@@ -31,6 +37,7 @@ struct Deen_App: App {
                 .environmentObject(locationManager)
                 .environmentObject(qiblaManager)
                 .preferredColorScheme(colorScheme)
+                .tint(accentColor)
 
         }
 

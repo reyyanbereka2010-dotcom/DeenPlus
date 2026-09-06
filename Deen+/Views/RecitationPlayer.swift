@@ -222,7 +222,13 @@ final class RecitationPlayer: ObservableObject {
 
     private func playAyahInternal(surahId: Int, ayahNumber: Int, continuous: Bool, reciter: Reciter? = nil) {
         let chosen = reciter ?? activeReciter
-        guard let url = RecitationProvider.ayahURL(surahId: surahId, ayahNumber: ayahNumber, reciter: chosen) else {
+        let audioUrl: URL?
+        if let local = VoiceDownloadManager.shared.localSurahAudioURL(reciter: chosen, surahId: surahId) {
+            audioUrl = local
+        } else {
+            audioUrl = RecitationProvider.ayahURL(surahId: surahId, ayahNumber: ayahNumber, reciter: chosen)
+        }
+        guard let url = audioUrl else {
             stop()
             return
         }

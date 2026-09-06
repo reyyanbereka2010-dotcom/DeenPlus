@@ -51,6 +51,11 @@ struct ContentView: View {
     @EnvironmentObject var prayerManager: PrayerManager
     @State private var selectedTab = 0
     @AppStorage("menuBarStyle") private var menuBarStyle: String = "pill"
+    @AppStorage("appAccentColor") private var appAccentColor: String = "emerald"
+
+    private var accent: Color {
+        AppAccentColor(rawValue: appAccentColor)?.color ?? .green
+    }
 
     var body: some View {
         Group {
@@ -99,7 +104,7 @@ struct ContentView: View {
                         }
                         .tag(6)
                 }
-                .tint(.green)
+                .tint(accent)
                 .onAppear {
                     let appearance = UITabBarAppearance()
                     appearance.configureWithDefaultBackground()
@@ -152,6 +157,11 @@ struct ContentView: View {
 struct CustomBottomMenuBar: View {
     @Binding var selectedTab: Int
     let style: String
+    @AppStorage("appAccentColor") private var appAccentColor: String = "emerald"
+
+    private var accent: Color {
+        AppAccentColor(rawValue: appAccentColor)?.color ?? .green
+    }
 
     var body: some View {
         HStack(spacing: 2) {
@@ -169,19 +179,19 @@ struct CustomBottomMenuBar: View {
                         ZStack {
                             if selectedTab == item.rawValue {
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(Color.green.opacity(0.18))
+                                    .fill(accent.opacity(0.18))
                                     .frame(width: 40, height: 32)
                             }
 
                             Image(systemName: item.icon)
                                 .font(.system(size: 16, weight: selectedTab == item.rawValue ? .semibold : .regular))
-                                .foregroundStyle(selectedTab == item.rawValue ? Color.green : Color.secondary)
+                                .foregroundStyle(selectedTab == item.rawValue ? accent : Color.secondary)
                         }
                         .frame(height: 32)
 
                         Text(item.title)
                             .font(.system(size: 10, weight: selectedTab == item.rawValue ? .bold : .medium))
-                            .foregroundStyle(selectedTab == item.rawValue ? Color.green : Color.secondary)
+                            .foregroundStyle(selectedTab == item.rawValue ? accent : Color.secondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }

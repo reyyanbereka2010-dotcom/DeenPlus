@@ -454,6 +454,12 @@ struct SurahReaderView: View {
                 NavigationStack {
                     Form {
                         Section("Audio Narrators") {
+                            NavigationLink {
+                                RecitationSettingsView()
+                            } label: {
+                                Label("Manage Voices & Audio Downloads", systemImage: "waveform.badge.mic")
+                                    .foregroundStyle(Color.green)
+                            }
                             HStack {
                                 Text("Arabic Sheikh")
                                 Spacer()
@@ -572,6 +578,15 @@ struct SurahReaderView: View {
                                 Slider(value: $translationFontSize, in: 13...24, step: 1)
                             }
                             .padding(.vertical, 4)
+                        }
+
+                        Section("Global Themes") {
+                            NavigationLink {
+                                AppearanceSettingsView()
+                            } label: {
+                                Label("Global App Theme & Appearance", systemImage: "paintbrush.fill")
+                                    .foregroundStyle(Color.purple)
+                            }
                         }
 
                         Section("Preferences") {
