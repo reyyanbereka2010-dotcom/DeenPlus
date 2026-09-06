@@ -86,7 +86,7 @@ struct SettingsView: View {
                                     .font(.title2.bold())
                                     .foregroundStyle(.primary)
 
-                                Text("v1.1.7")
+                                Text("v1.1.8")
                                     .font(.caption2.bold())
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -405,7 +405,7 @@ struct SettingsView: View {
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text("1.1.7 (9)")
+                        Text("1.1.8 (10)")
                             .foregroundStyle(.secondary)
                     }
 

@@ -100,8 +100,8 @@ class NotificationManager {
 
     private func scheduleTestRequest(delay: TimeInterval, completion: @escaping (Bool, String?) -> Void) {
         let content = UNMutableNotificationContent()
-        content.title = "🕌 Prayer Alert Test"
-        content.body = "Allahu Akbar • Testing prayer reminder & adhan sound. Notifications are active!"
+        content.title = "test notif"
+        content.body = "test notif"
 
         let defaults = UserDefaults.standard
         let soundRaw = defaults.string(forKey: notificationSoundKey) ?? NotificationSoundOption.adhanTakbeer.rawValue
