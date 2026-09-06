@@ -13,47 +13,44 @@ import AVFoundation
 import UIKit
 #endif
 
-
 struct VerseRow: View {
 
     let verse: QuranVerse
     let arabicSize: CGFloat
+    var translationSize: CGFloat = 16
     let showTranslation: Bool
     let highlighted: Bool
 
     @ObservedObject private var recitationPlayer = RecitationPlayer.shared
+    @ObservedObject private var translationNarrator = TranslationNarrator.shared
+
+    @State private var isBookmarked = false
+    @State private var showCopiedAlert = false
+
+    #if canImport(UIKit)
+    @State private var showShareSheet = false
+    #endif
 
     private var isPlayingRecitation: Bool {
         recitationPlayer.isPlayingAyah(surahId: verse.surah, ayahNumber: verse.ayah)
     }
 
-    private var accessibilityVerseLabel: String {
-        let surahNameText = verse.surahName ?? "Surah \(verse.surah)"
-        return "\(surahNameText), Ayah \(verse.verseKey.split(separator: ":").last ?? "")"
+    private var isSpeakingTranslation: Bool {
+        translationNarrator.isSpeaking(surah: verse.surah, ayah: verse.ayah)
     }
 
     private var ayahNumber: String {
         String(verse.verseKey.split(separator: ":").last ?? "")
     }
 
-    private var recitationAccessibilityLabel: String {
-        if isPlayingRecitation {
-            return "Pause recitation"
-        } else {
-            return "Play recitation by \(recitationPlayer.activeReciter.displayName)"
-        }
+    private var accessibilityVerseLabel: String {
+        let surahNameText = verse.surahName ?? "Surah \(verse.surah)"
+        return "\(surahNameText), Ayah \(ayahNumber)"
     }
 
-    @State private var isBookmarked = false
-
-    #if canImport(AVFoundation)
-    @State private var speechSynth = AVSpeechSynthesizer()
-    @State private var isSpeakingTranslation = false
-    #endif
-
-    #if canImport(UIKit)
-    @State private var showShareSheet = false
-    #endif
+    private var recitationAccessibilityLabel: String {
+        isPlayingRecitation ? "Pause recitation" : "Play recitation by \(recitationPlayer.activeReciter.displayName)"
+    }
 
     private var shareText: String {
         var parts: [String] = []
@@ -65,194 +62,76 @@ struct VerseRow: View {
         return parts.joined(separator: "\n\n")
     }
 
+    private var cardBackgroundColor: Color {
+        if isPlayingRecitation {
+            return Color.green.opacity(0.18)
+        } else if isSpeakingTranslation {
+            return Color.blue.opacity(0.15)
+        } else if highlighted {
+            return Color.green.opacity(0.18)
+        } else {
+            return Color(.secondarySystemBackground)
+        }
+    }
+
+    private var cardBorderColor: Color {
+        if isPlayingRecitation {
+            return Color.green.opacity(0.7)
+        } else if isSpeakingTranslation {
+            return Color.blue.opacity(0.6)
+        } else if highlighted {
+            return Color.green.opacity(0.4)
+        } else {
+            return Color.clear
+        }
+    }
+
+    private var cardBorderWidth: CGFloat {
+        (isPlayingRecitation || isSpeakingTranslation) ? 2 : 1
+    }
+
+    private var cardShadowColor: Color {
+        if isPlayingRecitation {
+            return Color.green.opacity(0.16)
+        } else if isSpeakingTranslation {
+            return Color.blue.opacity(0.14)
+        } else {
+            return Color.black.opacity(0.06)
+        }
+    }
+
+    // MARK: - Body
+
     var body: some View {
         VStack(spacing: 18) {
-            // Top Row Header with Ayah Number Badge aligned on the RIGHT
-            HStack {
-                if isPlayingRecitation {
-                    HStack(spacing: 5) {
-                        Image(systemName: "waveform")
-                            .font(.caption2)
-                            .foregroundStyle(.green)
-                            .symbolEffect(.variableColor.iterative, options: .repeating)
-                        Text(recitationPlayer.activeReciter.shortName)
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.green)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.green.opacity(0.12))
-                    .clipShape(Capsule())
-                    .transition(.opacity.combined(with: .scale))
-                }
-
-                Spacer()
-                
-                HStack(spacing: 4) {
-                    Text("Ayah")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text(ayahNumber)
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.green)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Color.green.opacity(0.14))
-                .clipShape(Capsule())
-            }
-            .padding(.horizontal, 4)
-
-            Text(verse.arabic)
-                .font(
-                    .custom(
-                        "KFGQPC Uthmanic Script HAFS Regular",
-                        size: arabicSize
-                    )
-                )
-                .multilineTextAlignment(.trailing)
-                .lineSpacing(18)
-                .environment(
-                    \.layoutDirection,
-                    .rightToLeft
-                )
-                .padding(.horizontal)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .minimumScaleFactor(0.5)
-                .textSelection(.enabled)
-                .accessibilityLabel(accessibilityVerseLabel)
-                .accessibilityHint("Double tap to toggle bookmark or play audio")
-
-            HStack(spacing: 6) {
-                Capsule()
-                    .fill(Color.green.opacity(0.4))
-                    .frame(width: 24, height: 2)
-                Circle()
-                    .fill(Color.green.opacity(0.4))
-                    .frame(width: 4, height: 4)
-                Capsule()
-                    .fill(Color.green.opacity(0.4))
-                    .frame(width: 24, height: 2)
-            }
-            .padding(.top, 2)
-            .accessibilityHidden(true)
-
+            headerRow
+            arabicView
+            verseSeparator
             if showTranslation {
-                Text(verse.translation)
-                    .font(.body)
-                    .multilineTextAlignment(.leading)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal)
-                    .textSelection(.enabled)
-                    .accessibilityLabel("Translation: \(verse.translation)")
+                translationView
             }
-
-            HStack(spacing: 28) {
-                Button {
-                    playRecitation()
-                } label: {
-                    Image(
-                        systemName: isPlayingRecitation ? "pause.circle.fill" : "play.circle.fill"
-                    )
-                    .font(.title2)
-                    .foregroundStyle(isPlayingRecitation ? Color.green : Color.primary)
-                    .accessibilityLabel(recitationAccessibilityLabel)
-                    .accessibilityHint("Plays audio for this ayah")
-                }
-
-                Button {
-                    toggleBookmark()
-                } label: {
-                    Image(
-                        systemName:
-                            isBookmarked
-                            ? "bookmark.fill"
-                            : "bookmark"
-                    )
-                    .foregroundStyle(isBookmarked ? Color.orange : Color.primary)
-                    .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Add bookmark")
-                    .accessibilityValue(isBookmarked ? "Bookmarked" : "Not bookmarked")
-                    .accessibilityHint("Toggles bookmark for this ayah")
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal)
+            actionBar
         }
         .padding(.vertical, 18)
         .padding(.horizontal, 8)
         .background(
-            RoundedRectangle(
-                cornerRadius: 22
-            )
-            .fill(
-                isPlayingRecitation
-                ? Color.green.opacity(0.18)
-                : (highlighted ? Color.green.opacity(0.18) : Color(.secondarySystemBackground))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(
-                        isPlayingRecitation
-                        ? Color.green.opacity(0.7)
-                        : (highlighted ? Color.green.opacity(0.4) : Color.clear),
-                        lineWidth: isPlayingRecitation ? 2 : 1
-                    )
-            )
+            RoundedRectangle(cornerRadius: 22)
+                .fill(cardBackgroundColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(cardBorderColor, lineWidth: cardBorderWidth)
         )
         .shadow(
-            color: isPlayingRecitation ? Color.green.opacity(0.16) : Color.black.opacity(0.06),
-            radius: isPlayingRecitation ? 12 : 8,
+            color: cardShadowColor,
+            radius: (isPlayingRecitation || isSpeakingTranslation) ? 12 : 8,
             x: 0,
             y: 4
         )
-        .accessibilityAddTraits(highlighted || isPlayingRecitation ? .isSelected : [])
         .padding(.horizontal, 12)
         .contentShape(Rectangle())
         .contextMenu {
-            Button {
-                copyArabic()
-            } label: {
-                Label("Copy Arabic", systemImage: "doc.on.doc")
-            }
-            if showTranslation {
-                Button {
-                    copyTranslation()
-                } label: {
-                    Label("Copy translation", systemImage: "doc.on.doc")
-                }
-            }
-            Button {
-                shareVerse()
-            } label: {
-                Label("Share", systemImage: "square.and.arrow.up")
-            }
-            Divider()
-            Button {
-                playRecitation()
-            } label: {
-                Label(
-                    isPlayingRecitation ? "Pause Recitation" : "Play Recitation (\(recitationPlayer.activeReciter.shortName))",
-                    systemImage: isPlayingRecitation ? "pause.circle.fill" : "play.circle.fill"
-                )
-            }
-            #if canImport(AVFoundation)
-            if showTranslation {
-                Button {
-                    speakTranslation()
-                } label: {
-                    Label(isSpeakingTranslation ? "Stop speaking English" : "Speak English translation", systemImage: "speaker.wave.2.fill")
-                }
-            }
-            #endif
-            Divider()
-            Button {
-                toggleBookmark()
-            } label: {
-                Label(isBookmarked ? "Remove bookmark" : "Add bookmark", systemImage: isBookmarked ? "bookmark.fill" : "bookmark")
-            }
+            contextMenuItems
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
@@ -270,47 +149,17 @@ struct VerseRow: View {
             }
             .tint(.orange)
         }
-        .animation(
-            .easeInOut(duration: 0.3),
-            value: highlighted || isPlayingRecitation
-        )
+        .animation(.easeInOut(duration: 0.3), value: highlighted || isPlayingRecitation || isSpeakingTranslation)
         .onAppear {
             checkBookmark()
         }
         .onChange(of: verse.id) { _ in
             checkBookmark()
         }
-        .accessibilityActions {
-            Button(isBookmarked ? "Remove bookmark" : "Add bookmark") {
-                toggleBookmark()
-            }
-            Button(isPlayingRecitation ? "Pause recitation" : "Play recitation") {
-                playRecitation()
-            }
-            Button("Copy Arabic") {
-                copyArabic()
-            }
-            if showTranslation {
-                Button("Copy translation") {
-                    copyTranslation()
-                }
-                #if canImport(AVFoundation)
-                Button(isSpeakingTranslation ? "Stop speaking English" : "Speak English translation") {
-                    speakTranslation()
-                }
-                #endif
-            }
-            Button("Share") {
-                shareVerse()
-            }
-        }
         .onDisappear {
-            #if canImport(AVFoundation)
             if isSpeakingTranslation {
-                speechSynth.stopSpeaking(at: .immediate)
-                isSpeakingTranslation = false
+                translationNarrator.stop()
             }
-            #endif
         }
         #if canImport(UIKit)
         .sheet(isPresented: $showShareSheet) {
@@ -319,6 +168,215 @@ struct VerseRow: View {
         #endif
     }
 
+    // MARK: - Subviews
+
+    private var headerRow: some View {
+        HStack {
+            if isPlayingRecitation {
+                HStack(spacing: 5) {
+                    Image(systemName: "waveform")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                        .symbolEffect(.variableColor.iterative, options: .repeating)
+                    Text(recitationPlayer.activeReciter.shortName)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.green)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.green.opacity(0.12), in: Capsule())
+            } else if isSpeakingTranslation {
+                HStack(spacing: 5) {
+                    Image(systemName: "waveform")
+                        .font(.caption2)
+                        .foregroundStyle(.blue)
+                        .symbolEffect(.variableColor.iterative, options: .repeating)
+                    Text(translationNarrator.activeVoice.shortName)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.blue)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.blue.opacity(0.12), in: Capsule())
+            }
+
+            Spacer()
+
+            if showCopiedAlert {
+                Text("Copied!")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.green)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color.green.opacity(0.14), in: Capsule())
+            }
+
+            HStack(spacing: 4) {
+                Text("Ayah")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(ayahNumber)
+                    .font(.caption.bold())
+                    .foregroundStyle(.green)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Color.green.opacity(0.14), in: Capsule())
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private var arabicView: some View {
+        Text(verse.arabic)
+            .font(.custom("KFGQPC Uthmanic Script HAFS Regular", size: arabicSize))
+            .multilineTextAlignment(.trailing)
+            .lineSpacing(18)
+            .environment(\.layoutDirection, .rightToLeft)
+            .padding(.horizontal)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .minimumScaleFactor(0.5)
+            .textSelection(.enabled)
+            .accessibilityLabel(accessibilityVerseLabel)
+            .accessibilityHint("Double tap to toggle bookmark or play audio")
+    }
+
+    private var verseSeparator: some View {
+        HStack(spacing: 6) {
+            Capsule()
+                .fill(Color.green.opacity(0.4))
+                .frame(width: 24, height: 2)
+            Circle()
+                .fill(Color.green.opacity(0.4))
+                .frame(width: 4, height: 4)
+            Capsule()
+                .fill(Color.green.opacity(0.4))
+                .frame(width: 24, height: 2)
+        }
+        .padding(.top, 2)
+        .accessibilityHidden(true)
+    }
+
+    private var translationView: some View {
+        Text(verse.translation)
+            .font(.system(size: translationSize))
+            .lineSpacing(5)
+            .multilineTextAlignment(.leading)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .textSelection(.enabled)
+            .accessibilityLabel("Translation: \(verse.translation)")
+    }
+
+    private var actionBar: some View {
+        HStack(spacing: 24) {
+            Button {
+                playRecitation()
+            } label: {
+                Image(systemName: isPlayingRecitation ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(isPlayingRecitation ? Color.green : Color.primary)
+                    .accessibilityLabel(recitationAccessibilityLabel)
+            }
+
+            if showTranslation {
+                Button {
+                    speakTranslation()
+                } label: {
+                    Image(systemName: isSpeakingTranslation ? "speaker.wave.3.circle.fill" : "speaker.wave.2.circle")
+                        .font(.title2)
+                        .foregroundStyle(isSpeakingTranslation ? Color.blue : Color.secondary)
+                        .accessibilityLabel(isSpeakingTranslation ? "Stop English narration" : "Listen to translation by \(translationNarrator.activeVoice.shortName)")
+                }
+            }
+
+            Button {
+                toggleBookmark()
+            } label: {
+                Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                    .font(.title3)
+                    .foregroundStyle(isBookmarked ? Color.orange : Color.primary)
+                    .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Add bookmark")
+            }
+
+            Button {
+                copyVerse()
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Copy ayah and translation")
+            }
+
+            Button {
+                shareVerse()
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Share ayah")
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private var contextMenuItems: some View {
+        Button {
+            copyArabic()
+        } label: {
+            Label("Copy Arabic", systemImage: "doc.on.doc")
+        }
+
+        if showTranslation {
+            Button {
+                copyTranslation()
+            } label: {
+                Label("Copy Translation", systemImage: "doc.on.doc")
+            }
+        }
+
+        Button {
+            shareVerse()
+        } label: {
+            Label("Share", systemImage: "square.and.arrow.up")
+        }
+
+        Divider()
+
+        Button {
+            playRecitation()
+        } label: {
+            Label(
+                isPlayingRecitation ? "Pause Recitation" : "Play Recitation (\(recitationPlayer.activeReciter.shortName))",
+                systemImage: isPlayingRecitation ? "pause.circle.fill" : "play.circle.fill"
+            )
+        }
+
+        if showTranslation {
+            Button {
+                speakTranslation()
+            } label: {
+                Label(
+                    isSpeakingTranslation ? "Stop English Narration" : "Listen in English (\(translationNarrator.activeVoice.shortName))",
+                    systemImage: isSpeakingTranslation ? "speaker.slash.fill" : "speaker.wave.2.fill"
+                )
+            }
+        }
+
+        Divider()
+
+        Button {
+            toggleBookmark()
+        } label: {
+            Label(isBookmarked ? "Remove Bookmark" : "Add Bookmark", systemImage: isBookmarked ? "bookmark.fill" : "bookmark")
+        }
+    }
+
+    // MARK: - Actions
+
     private func playRecitation() {
         #if canImport(UIKit)
         #if !targetEnvironment(simulator)
@@ -326,39 +384,44 @@ struct VerseRow: View {
         #endif
         #endif
 
-        #if canImport(AVFoundation)
         if isSpeakingTranslation {
-            speechSynth.stopSpeaking(at: .immediate)
-            isSpeakingTranslation = false
+            translationNarrator.stop()
         }
-        #endif
 
         recitationPlayer.togglePlayAyah(surahId: verse.surah, ayahNumber: verse.ayah)
     }
 
-    #if canImport(AVFoundation)
     private func speakTranslation() {
-        if isSpeakingTranslation {
-            speechSynth.stopSpeaking(at: .immediate)
-            isSpeakingTranslation = false
-        } else {
-            let text = showTranslation ? verse.translation : ""
-            guard !text.isEmpty else { return }
-            let utterance = AVSpeechUtterance(string: text)
-            if AVSpeechSynthesisVoice(language: "en") != nil {
-                utterance.voice = AVSpeechSynthesisVoice(language: "en")
-            }
-            utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-            speechSynth.speak(utterance)
-            isSpeakingTranslation = true
-        }
         #if canImport(UIKit)
         #if !targetEnvironment(simulator)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         #endif
         #endif
+
+        if isPlayingRecitation {
+            recitationPlayer.pause()
+        }
+
+        let text = showTranslation ? verse.translation : ""
+        translationNarrator.togglePlay(surah: verse.surah, ayah: verse.ayah, text: text)
     }
-    #endif
+
+    private func copyVerse() {
+        #if canImport(UIKit)
+        UIPasteboard.general.string = shareText
+        #if !targetEnvironment(simulator)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+        #endif
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            showCopiedAlert = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showCopiedAlert = false
+            }
+        }
+    }
 
     private func copyArabic() {
         #if canImport(UIKit)

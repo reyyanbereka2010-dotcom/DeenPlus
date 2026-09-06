@@ -14,7 +14,7 @@
 
 /* Begin PBXFileReference section */
 		3E134D73300D793500EAFBD4 /* Deen--Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Deen--Info.plist"; sourceTree = "<group>"; };
-		3E75040B3009DC0100875DDF /* Deen+.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Deen+.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E75040B3009DC0100875DDF /* Deen+.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Deen+.app"; path = Deen.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3EDBA02B30113A630042325D /* adhan.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan.caf; sourceTree = "<group>"; };
 		3EDBA03B30113A630042325D /* adhan_takbeer.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan_takbeer.caf; sourceTree = "<group>"; };
 		3EDBA04A3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "KFGQPC Uthmanic Script HAFS Regular.otf"; sourceTree = "<group>"; };
@@ -264,8 +264,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = D74384M94C;
@@ -301,8 +301,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = D74384M94C;

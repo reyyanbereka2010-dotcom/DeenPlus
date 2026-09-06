@@ -2,8 +2,13 @@
 //  SurahReaderView.swift
 //  Deen+
 //
+//  Created by Reyyan Bereka on 7/16/26.
+//
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct SurahReaderView: View {
     
@@ -14,15 +19,20 @@ struct SurahReaderView: View {
     let resumeVerse: Int?
     
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var quranManager = QuranManager()
     @ObservedObject private var recitationPlayer = RecitationPlayer.shared
+    @ObservedObject private var translationNarrator = TranslationNarrator.shared
     
     @State private var showJumpToAyah = false
     @State private var showDisplaySettings = false
     @State private var targetAyahInput = ""
     
     @AppStorage("quranArabicFontSize") private var arabicFontSize: Double = 26
+    @AppStorage("quranTranslationFontSize") private var translationFontSize: Double = 16
     @AppStorage("quranShowTranslation") private var showTranslation: Bool = true
+    @AppStorage("quranReadingTheme") private var readingTheme: String = "standard"
+    @AppStorage("quranKeepScreenAwake") private var keepScreenAwake: Bool = true
     
     /// Currently highlighted Ayah number to visually distinguish it (e.g. after jump or resume)
     @State private var highlightedAyahNumber: Int?
@@ -38,6 +48,19 @@ struct SurahReaderView: View {
     
     /// Flag to indicate the initial scroll to resume position has completed
     @State private var hasFinishedInitialScroll = false
+
+    private var readerBackgroundColor: Color {
+        switch readingTheme {
+        case "sepia":
+            return colorScheme == .dark
+                ? Color(red: 0.16, green: 0.14, blue: 0.11)
+                : Color(red: 0.98, green: 0.96, blue: 0.91)
+        case "black":
+            return Color.black
+        default:
+            return Color(uiColor: .systemGroupedBackground)
+        }
+    }
     
     init(
         surah: Int,
@@ -57,6 +80,9 @@ struct SurahReaderView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ZStack(alignment: .bottom) {
+                readerBackgroundColor
+                    .ignoresSafeArea()
+
                 ScrollView {
                     VStack(spacing: 16) {
                         // Header scrolls inline with the verses so it doesn't block the screen
@@ -92,6 +118,7 @@ struct SurahReaderView: View {
                                         VerseRow(
                                             verse: verse,
                                             arabicSize: CGFloat(arabicFontSize),
+                                            translationSize: CGFloat(translationFontSize),
                                             showTranslation: showTranslation,
                                             highlighted: highlightedAyahNumber == ayah
                                         )
@@ -100,7 +127,7 @@ struct SurahReaderView: View {
                                             GeometryReader { geo in
                                                 Color.clear
                                                     .preference(
-                                                        key: AyahPositionKey.self,
+                                                        key: AyahPositionPreferenceKey.self,
                                                         value: [
                                                             ayah: geo.frame(in: .named("scroll")).minY
                                                         ]
@@ -109,6 +136,66 @@ struct SurahReaderView: View {
                                         )
                                     }
                                 }
+
+                                // Surah Navigation Footer
+                                if !quranManager.isLoading && !quranManager.verses.isEmpty {
+                                    HStack(spacing: 12) {
+                                        if surah > 1 {
+                                            let prevSurah = surah - 1
+                                            let prevInfo = SurahMetadata.get(prevSurah)
+                                            NavigationLink {
+                                                SurahReaderView(surah: prevSurah, surahName: prevInfo.englishName)
+                                            } label: {
+                                                HStack(spacing: 8) {
+                                                    Image(systemName: "chevron.left")
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text("Previous Surah")
+                                                            .font(.caption2)
+                                                            .foregroundStyle(.secondary)
+                                                        Text(prevInfo.englishName)
+                                                            .font(.subheadline.bold())
+                                                            .foregroundStyle(.primary)
+                                                            .lineLimit(1)
+                                                    }
+                                                }
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 12)
+                                                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+
+                                        if surah < 114 {
+                                            let nextSurah = surah + 1
+                                            let nextInfo = SurahMetadata.get(nextSurah)
+                                            NavigationLink {
+                                                SurahReaderView(surah: nextSurah, surahName: nextInfo.englishName)
+                                            } label: {
+                                                HStack(spacing: 8) {
+                                                    VStack(alignment: .trailing, spacing: 2) {
+                                                        Text("Next Surah")
+                                                            .font(.caption2)
+                                                            .foregroundStyle(.secondary)
+                                                        Text(nextInfo.englishName)
+                                                            .font(.subheadline.bold())
+                                                            .foregroundStyle(.green)
+                                                            .lineLimit(1)
+                                                    }
+                                                    Image(systemName: "chevron.right")
+                                                        .foregroundStyle(.green)
+                                                }
+                                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 12)
+                                                .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                    .padding(.top, 16)
+                                    .padding(.horizontal, 4)
+                                }
                             }
                         }
                     }
@@ -116,7 +203,7 @@ struct SurahReaderView: View {
                     .padding(.bottom, recitationPlayer.currentSurahId == surah && recitationPlayer.currentAyahNumber != nil ? 110 : 80)
                 }
                 .coordinateSpace(name: "scroll")
-                .onPreferenceChange(AyahPositionKey.self) { positions in
+                .onPreferenceChange(AyahPositionPreferenceKey.self) { positions in
                     guard hasFinishedInitialScroll, !positions.isEmpty else {
                         return
                     }
@@ -223,9 +310,24 @@ struct SurahReaderView: View {
                     .animation(.spring(response: 0.35, dampingFraction: 0.8), value: recitationPlayer.currentAyahNumber)
                 }
             }
-            .navigationTitle(surahName ?? SurahMetadata.get(surah).englishName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    VStack(spacing: 2) {
+                        Text(surahName ?? SurahMetadata.get(surah).englishName)
+                            .font(.headline)
+
+                        let total = quranManager.verses.count > 0 ? quranManager.verses.count : SurahMetadata.get(surah).totalAyahs
+                        if total > 0 {
+                            let current = max(1, currentAyah)
+                            let pct = Int(Double(current) / Double(total) * 100)
+                            Text("Ayah \(current) of \(total) • \(pct)%")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
@@ -304,6 +406,11 @@ struct SurahReaderView: View {
             }
             .onAppear {
                 isDownloaded = QuranFileManager.shared.isDownloaded(id: surah)
+                if keepScreenAwake {
+                    #if canImport(UIKit)
+                    UIApplication.shared.isIdleTimerDisabled = true
+                    #endif
+                }
                 
                 Task {
                     let name = surahName ?? SurahMetadata.get(surah).englishName
@@ -340,61 +447,109 @@ struct SurahReaderView: View {
             }
             .onDisappear {
                 recitationPlayer.pause()
+                translationNarrator.stop()
+                #if canImport(UIKit)
+                UIApplication.shared.isIdleTimerDisabled = false
+                #endif
             }
             .sheet(isPresented: $showDisplaySettings) {
-                VStack(spacing: 20) {
-                    Text("Reader & Audio Settings")
-                        .font(.headline)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Reciter / Sheikh")
-                                .font(.subheadline)
-                            Spacer()
-                            Picker("Sheikh", selection: Binding(
-                                get: { recitationPlayer.activeReciter },
-                                set: { recitationPlayer.setReciter($0) }
-                            )) {
-                                ForEach(Reciter.allCases) { reciter in
-                                    Text(reciter.displayName).tag(reciter)
+                NavigationStack {
+                    Form {
+                        Section("Audio Narrators") {
+                            HStack {
+                                Text("Arabic Sheikh")
+                                Spacer()
+                                Picker("Sheikh", selection: Binding(
+                                    get: { recitationPlayer.activeReciter },
+                                    set: { recitationPlayer.setReciter($0) }
+                                )) {
+                                    ForEach(Reciter.allCases) { reciter in
+                                        Text(reciter.displayName).tag(reciter)
+                                    }
                                 }
+                                .pickerStyle(.menu)
+                                .tint(.green)
                             }
-                            .pickerStyle(.menu)
-                            .tint(.green)
+
+                            HStack {
+                                Text("English Voice")
+                                Spacer()
+                                Picker("Translation Voice", selection: $translationNarrator.activeVoice) {
+                                    ForEach(TranslationVoice.allCases) { voice in
+                                        Text(voice.shortName).tag(voice)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .tint(.blue)
+
+                                Button {
+                                    translationNarrator.preview(voice: translationNarrator.activeVoice)
+                                } label: {
+                                    Image(systemName: translationNarrator.isPreviewing ? "speaker.wave.3.fill" : "play.circle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(.blue)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Preview translation voice")
+                            }
+                        }
+
+                        Section("Reading Theme") {
+                            Picker("Theme", selection: $readingTheme) {
+                                Text("Standard").tag("standard")
+                                Text("Warm Sepia").tag("sepia")
+                                Text("AMOLED Night").tag("black")
+                            }
+                            .pickerStyle(.segmented)
+                        }
+
+                        Section("Font Sizing") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("Arabic Font Size")
+                                    Spacer()
+                                    Text("\(Int(arabicFontSize)) pt")
+                                        .foregroundStyle(.secondary)
+                                }
+                                Slider(value: $arabicFontSize, in: 18...38, step: 2)
+                            }
+                            .padding(.vertical, 4)
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("Translation Font Size")
+                                    Spacer()
+                                    Text("\(Int(translationFontSize)) pt")
+                                        .foregroundStyle(.secondary)
+                                }
+                                Slider(value: $translationFontSize, in: 13...24, step: 1)
+                            }
+                            .padding(.vertical, 4)
+                        }
+
+                        Section("Preferences") {
+                            Toggle("Show English Translation", isOn: $showTranslation)
+                            Toggle("Keep Screen Awake", isOn: $keepScreenAwake)
+                                .onChange(of: keepScreenAwake) { enabled in
+                                    #if canImport(UIKit)
+                                    UIApplication.shared.isIdleTimerDisabled = enabled
+                                    #endif
+                                }
                         }
                     }
-                    .padding(.horizontal, 4)
-                    
-                    Divider()
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Arabic Font Size")
-                            Spacer()
-                            Text("\(Int(arabicFontSize)) pt")
-                                .foregroundStyle(.secondary)
-                        }
-                        
-                        HStack(spacing: 16) {
-                            Text("A")
-                                .font(.footnote)
-                            Slider(value: $arabicFontSize, in: 18...38, step: 2)
-                            Text("A")
-                                .font(.title3).bold()
+                    .navigationTitle("Reader Settings")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                showDisplaySettings = false
+                            }
+                            .fontWeight(.bold)
+                            .foregroundStyle(.green)
                         }
                     }
-                    
-                    Toggle("Show English Translation", isOn: $showTranslation)
-                        .toggleStyle(.switch)
-                    
-                    Button("Done") {
-                        showDisplaySettings = false
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
                 }
-                .padding()
-                .presentationDetents([.fraction(0.45)])
+                .presentationDetents([.fraction(0.65), .large])
             }
             .sheet(isPresented: $showJumpToAyah) {
                 VStack(spacing: 20) {
@@ -442,25 +597,17 @@ struct SurahReaderView: View {
     
     private func parseAyahNumber(from verseKey: String) -> Int {
         let parts = verseKey.split(separator: ":")
-        if parts.count == 2, let num = Int(parts[1]) {
-            return num
+        if parts.count == 2, let ayah = Int(parts[1]) {
+            return ayah
         }
         return 0
     }
     
     private func saveAyah(_ ayah: Int) {
-        guard ayah > 0 else { return }
         RecentlyReadManager.shared.save(
             surah: surah,
             surahName: surahName ?? SurahMetadata.get(surah).englishName,
             verse: ayah
         )
-    }
-
-    struct AyahPositionKey: PreferenceKey {
-        static var defaultValue: [Int: CGFloat] = [:]
-        static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
-            value.merge(nextValue()) { _, new in new }
-        }
     }
 }
