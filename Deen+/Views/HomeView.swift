@@ -387,9 +387,6 @@ struct HomeView: View {
                 
                 // Main Content ScrollView
                 ScrollView(showsIndicators: false) {
-                    ScrollDetector(hideTabBar: $hideTabBar)
-                        .frame(height: 0)
-                    
                     VStack(spacing: 20) {
                         // 1. Top Navigation & Greeting Header
                         headerView

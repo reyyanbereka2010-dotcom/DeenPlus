@@ -111,7 +111,7 @@ struct SurahReaderView: View {
                                 }
                                 .padding(.top, 60)
                             } else {
-                                VStack(spacing: 16) {
+                                LazyVStack(spacing: 16) {
                                     ForEach(quranManager.verses) { verse in
                                         let ayah = parseAyahNumber(from: verse.verseKey)
                                         
@@ -213,8 +213,11 @@ struct SurahReaderView: View {
                     }
                     
                     if let ayah = closest?.key, ayah != currentAyah {
-                        currentAyah = ayah
-                        saveAyah(ayah)
+                        DispatchQueue.main.async {
+                            guard self.currentAyah != ayah else { return }
+                            self.currentAyah = ayah
+                            self.saveAyah(ayah)
+                        }
                     }
                 }
                 .onChange(of: recitationPlayer.currentAyahNumber) { newAyah in

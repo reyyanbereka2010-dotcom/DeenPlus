@@ -133,22 +133,6 @@ struct VerseRow: View {
         .contextMenu {
             contextMenuItems
         }
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button {
-                playRecitation()
-            } label: {
-                Label(isPlayingRecitation ? "Pause" : "Play", systemImage: isPlayingRecitation ? "pause.fill" : "play.fill")
-            }
-            .tint(.green)
-        }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button {
-                toggleBookmark()
-            } label: {
-                Label(isBookmarked ? "Unbookmark" : "Bookmark", systemImage: isBookmarked ? "bookmark.slash" : "bookmark")
-            }
-            .tint(.orange)
-        }
         .animation(.easeInOut(duration: 0.3), value: highlighted || isPlayingRecitation || isSpeakingTranslation)
         .onAppear {
             checkBookmark()
@@ -234,7 +218,6 @@ struct VerseRow: View {
             .environment(\.layoutDirection, .rightToLeft)
             .padding(.horizontal)
             .frame(maxWidth: .infinity, alignment: .trailing)
-            .minimumScaleFactor(0.5)
             .textSelection(.enabled)
             .accessibilityLabel(accessibilityVerseLabel)
             .accessibilityHint("Double tap to toggle bookmark or play audio")
