@@ -61,6 +61,7 @@ Deen+/
 ---
 
 ## Getting Started
+
 **Method 1**
 
 1. clone this repository:
@@ -77,6 +78,12 @@ Deen+/
 **Method 2** (need a PC if on iOS 26-26.6.1)
 1. download ipa from [releases](https://github.com/reyyanbereka2010-dotcom/DeenPlus/releases)
 2. sideload using [this](https://docs.sidestore.io/docs/installation/install) guide
+
+**Method 3**
+1. install Testflight from App store
+2. click this link
+3. done!
+
 ---
 
 ## License
