@@ -69,7 +69,9 @@ struct SurahReaderView: View {
         self.surahName = surahName
         self.arabicName = arabicName
         self.highlightVerse = highlightVerse
-        self.resumeVerse = resumeVerse ?? initialVerse
+        let target = resumeVerse ?? initialVerse ?? highlightVerse
+        self.resumeVerse = target
+        _currentAyah = State(initialValue: target ?? 0)
     }
     
     var body: some View {
@@ -209,6 +211,7 @@ struct SurahReaderView: View {
                     
                     if let ayah = closest?.key, ayah != currentAyah {
                         DispatchQueue.main.async {
+                            guard self.hasFinishedInitialScroll else { return }
                             guard self.currentAyah != ayah else { return }
                             self.currentAyah = ayah
                             self.saveAyah(ayah)
@@ -421,21 +424,8 @@ struct SurahReaderView: View {
                     
                     await MainActor.run {
                         let targetVerse = resumeVerse ?? highlightVerse
-                        if let targetVerse = targetVerse {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                withAnimation {
-                                    proxy.scrollTo(targetVerse, anchor: .center)
-                                    highlightedAyahNumber = targetVerse
-                                }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    hasFinishedInitialScroll = true
-                                }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                    withAnimation {
-                                        highlightedAyahNumber = nil
-                                    }
-                                }
-                            }
+                        if let targetVerse = targetVerse, targetVerse > 0 {
+                            scrollToTargetAyah(targetVerse, proxy: proxy)
                         } else {
                             highlightedAyahNumber = nil
                             hasFinishedInitialScroll = true
@@ -634,17 +624,7 @@ struct SurahReaderView: View {
                             if let target = Int(targetAyahInput), target >= 1, target <= quranManager.verses.count {
                                 showJumpToAyah = false
                                 targetAyahInput = ""
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    withAnimation {
-                                        proxy.scrollTo(target, anchor: .center)
-                                        highlightedAyahNumber = target
-                                    }
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                        withAnimation {
-                                            highlightedAyahNumber = nil
-                                        }
-                                    }
-                                }
+                                scrollToTargetAyah(target, proxy: proxy)
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -665,6 +645,48 @@ struct SurahReaderView: View {
         return 0
     }
     
+
+    private func scrollToTargetAyah(_ target: Int, proxy: ScrollViewProxy, animated: Bool = true) {
+        hasFinishedInitialScroll = false
+        currentAyah = target
+        highlightedAyahNumber = target
+
+        // Pass 1: Immediate un-animated jump to force LazyVStack to instantiate intermediate rows
+        proxy.scrollTo(target, anchor: .top)
+
+        // Staged iterative adjustments as SwiftUI calculates real verse heights
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            proxy.scrollTo(target, anchor: .top)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                proxy.scrollTo(target, anchor: .top)
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                    if animated {
+                        withAnimation(.easeInOut(duration: 0.35)) {
+                            proxy.scrollTo(target, anchor: .top)
+                        }
+                    } else {
+                        proxy.scrollTo(target, anchor: .top)
+                    }
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        proxy.scrollTo(target, anchor: .top)
+                        hasFinishedInitialScroll = true
+                    }
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                        withAnimation(.easeOut(duration: 0.5)) {
+                            if highlightedAyahNumber == target {
+                                highlightedAyahNumber = nil
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private func saveAyah(_ ayah: Int) {
         RecentlyReadManager.shared.save(
             surah: surah,
