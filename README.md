@@ -8,7 +8,7 @@
 
 
 
-A iOS Islamic prayer app built with SwiftUI.
+A offline iOS Islamic prayer app made with SwiftUI.
 
 ---
 
