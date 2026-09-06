@@ -47,15 +47,9 @@ struct RecitationSettingsView: View {
                             .foregroundStyle(.white)
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Recitation & Voices")
-                            .font(.headline.bold())
-                            .foregroundStyle(.primary)
-
-                        Text("World-renowned Sheikhs, authentic human translation voices, and offline voice audio.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text("Recitation & Voices")
+                        .font(.headline.bold())
+                        .foregroundStyle(.primary)
                 }
                 .padding(.vertical, 4)
             }
@@ -82,15 +76,9 @@ struct RecitationSettingsView: View {
                             }
                             .buttonStyle(.plain)
 
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(reciter.displayName)
-                                    .font(.subheadline.weight(isSelected ? .bold : .medium))
-                                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-
-                                Text(reciter.everyAyahFolder.replacingOccurrences(of: "_", with: " "))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
+                            Text(reciter.displayName)
+                                .font(.subheadline.weight(isSelected ? .bold : .medium))
+                                .foregroundStyle(isSelected ? Color.primary : Color.secondary)
 
                             Spacer()
 
@@ -133,23 +121,17 @@ struct RecitationSettingsView: View {
                             }
                             .buttonStyle(.plain)
 
-                            VStack(alignment: .leading, spacing: 3) {
-                                HStack(spacing: 6) {
-                                    Text(voice.displayName)
-                                        .font(.subheadline.weight(isSelected ? .bold : .medium))
-                                        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                            HStack(spacing: 6) {
+                                Text(voice.displayName)
+                                    .font(.subheadline.weight(isSelected ? .bold : .medium))
+                                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
 
-                                    Text(voice.languageName)
-                                        .font(.system(size: 10, weight: .bold))
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 1)
-                                        .background(Color.blue.opacity(0.12), in: Capsule())
-                                        .foregroundStyle(Color.blue)
-                                }
-
-                                Text(voice.subtitle)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                Text(voice.languageName)
+                                    .font(.system(size: 10, weight: .bold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 1)
+                                    .background(Color.blue.opacity(0.12), in: Capsule())
+                                    .foregroundStyle(Color.blue)
                             }
 
                             Spacer()

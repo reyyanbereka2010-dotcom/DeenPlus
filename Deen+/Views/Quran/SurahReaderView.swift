@@ -466,12 +466,7 @@ struct SurahReaderView: View {
                             }
 
                             HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Translation Voice")
-                                    Text("Authentic Muslim Voices")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
+                                Text("Translation Voice")
                                 Spacer()
                                 Picker("Translation Voice", selection: $translationNarrator.activeVoice) {
                                     ForEach(TranslationVoice.allCases) { voice in

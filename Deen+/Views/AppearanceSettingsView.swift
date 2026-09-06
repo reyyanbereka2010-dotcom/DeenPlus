@@ -49,15 +49,9 @@ struct AppearanceSettingsView: View {
                             .foregroundStyle(.white)
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Theme & Appearance")
-                            .font(.headline.bold())
-                            .foregroundStyle(.primary)
-
-                        Text("Customize color schemes, global accent tints, navigation bar styles, and reader themes.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text("Theme & Appearance")
+                        .font(.headline.bold())
+                        .foregroundStyle(.primary)
                 }
                 .padding(.vertical, 4)
             }

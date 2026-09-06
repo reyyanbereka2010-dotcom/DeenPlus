@@ -109,22 +109,7 @@ struct SettingsView: View {
                     NavigationLink {
                         RecitationSettingsView()
                     } label: {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.green.opacity(0.15))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "waveform.badge.mic")
-                                    .foregroundStyle(.green)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Recitation & Voice Audio")
-                                    .font(.body.weight(.medium))
-                                Text("Sheikh: \(recitationPlayer.activeReciter.shortName) • Voice: \(translationNarrator.activeVoice.shortName)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        Label("Recitation & Voices", systemImage: "waveform.badge.mic")
                     }
                     // Sheikh Selection
                     Picker(selection: $selectedQuranReciter) {
@@ -361,22 +346,7 @@ struct SettingsView: View {
                     NavigationLink {
                         AppearanceSettingsView()
                     } label: {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.purple.opacity(0.15))
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "paintbrush.fill")
-                                    .foregroundStyle(.purple)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Global Theme & Appearance")
-                                    .font(.body.weight(.medium))
-                                Text("App: \(appTheme) • Accent: \(AppAccentColor(rawValue: appAccentColor)?.displayName ?? "Emerald Green")")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        Label("Theme & Appearance", systemImage: "paintbrush.fill")
                     }
                     Picker("Theme", selection: $appTheme) {
                         Text("System").tag("System")
