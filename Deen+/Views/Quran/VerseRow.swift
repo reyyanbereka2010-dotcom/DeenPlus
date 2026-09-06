@@ -21,21 +21,34 @@ struct VerseRow: View {
     let showTranslation: Bool
     let highlighted: Bool
 
+    @ObservedObject private var recitationPlayer = RecitationPlayer.shared
+
+    private var isPlayingRecitation: Bool {
+        recitationPlayer.isPlayingAyah(surahId: verse.surah, ayahNumber: verse.ayah)
+    }
+
     private var accessibilityVerseLabel: String {
         let surahNameText = verse.surahName ?? "Surah \(verse.surah)"
         return "\(surahNameText), Ayah \(verse.verseKey.split(separator: ":").last ?? "")"
     }
+
     private var ayahNumber: String {
         String(verse.verseKey.split(separator: ":").last ?? "")
     }
 
+    private var recitationAccessibilityLabel: String {
+        if isPlayingRecitation {
+            return "Pause recitation"
+        } else {
+            return "Play recitation by \(recitationPlayer.activeReciter.displayName)"
+        }
+    }
 
     @State private var isBookmarked = false
 
     #if canImport(AVFoundation)
     @State private var speechSynth = AVSpeechSynthesizer()
     @State private var isSpeakingTranslation = false
-    @State private var isSpeakingArabic = false
     #endif
 
     #if canImport(UIKit)
@@ -52,11 +65,26 @@ struct VerseRow: View {
         return parts.joined(separator: "\n\n")
     }
 
-
     var body: some View {
         VStack(spacing: 18) {
             // Top Row Header with Ayah Number Badge aligned on the RIGHT
             HStack {
+                if isPlayingRecitation {
+                    HStack(spacing: 5) {
+                        Image(systemName: "waveform")
+                            .font(.caption2)
+                            .foregroundStyle(.green)
+                        Text(recitationPlayer.activeReciter.shortName)
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.green)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.green.opacity(0.12))
+                    .clipShape(Capsule())
+                }
+
                 Spacer()
                 
                 HStack(spacing: 4) {
@@ -124,10 +152,11 @@ struct VerseRow: View {
                     playRecitation()
                 } label: {
                     Image(
-                        systemName: "play.circle.fill"
+                        systemName: isPlayingRecitation ? "pause.circle.fill" : "play.circle.fill"
                     )
                     .font(.title2)
-                    .accessibilityLabel("Play recitation")
+                    .foregroundStyle(isPlayingRecitation ? Color.green : Color.primary)
+                    .accessibilityLabel(recitationAccessibilityLabel)
                     .accessibilityHint("Plays audio for this ayah")
                 }
 
@@ -140,6 +169,7 @@ struct VerseRow: View {
                             ? "bookmark.fill"
                             : "bookmark"
                     )
+                    .foregroundStyle(isBookmarked ? Color.orange : Color.primary)
                     .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Add bookmark")
                     .accessibilityValue(isBookmarked ? "Bookmarked" : "Not bookmarked")
                     .accessibilityHint("Toggles bookmark for this ayah")
@@ -156,13 +186,17 @@ struct VerseRow: View {
                 cornerRadius: 22
             )
             .fill(
-                highlighted
-                ? Color.green.opacity(0.18)
-                : Color(.secondarySystemBackground)
+                isPlayingRecitation
+                ? Color.green.opacity(0.16)
+                : (highlighted ? Color.green.opacity(0.18) : Color(.secondarySystemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22)
+                    .stroke(isPlayingRecitation ? Color.green.opacity(0.6) : Color.clear, lineWidth: 1.5)
             )
         )
         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
-        .accessibilityAddTraits(highlighted ? .isSelected : [])
+        .accessibilityAddTraits(highlighted || isPlayingRecitation ? .isSelected : [])
         .padding(.horizontal, 12)
         .contentShape(Rectangle())
         .contextMenu {
@@ -187,13 +221,18 @@ struct VerseRow: View {
             Button {
                 playRecitation()
             } label: {
-                Label("Play recitation", systemImage: "play.circle.fill")
+                Label(
+                    isPlayingRecitation ? "Pause Recitation" : "Play Recitation (\(recitationPlayer.activeReciter.shortName))",
+                    systemImage: isPlayingRecitation ? "pause.circle.fill" : "play.circle.fill"
+                )
             }
             #if canImport(AVFoundation)
-            Button {
-                speakTranslation()
-            } label: {
-                Label(isSpeakingTranslation ? "Stop speaking" : "Speak translation", systemImage: "speaker.wave.2.fill")
+            if showTranslation {
+                Button {
+                    speakTranslation()
+                } label: {
+                    Label(isSpeakingTranslation ? "Stop speaking English" : "Speak English translation", systemImage: "speaker.wave.2.fill")
+                }
             }
             #endif
             Divider()
@@ -207,7 +246,7 @@ struct VerseRow: View {
             Button {
                 playRecitation()
             } label: {
-                Label("Play", systemImage: "play.fill")
+                Label(isPlayingRecitation ? "Pause" : "Play", systemImage: isPlayingRecitation ? "pause.fill" : "play.fill")
             }
             .tint(.green)
         }
@@ -221,7 +260,7 @@ struct VerseRow: View {
         }
         .animation(
             .easeInOut,
-            value: highlighted
+            value: highlighted || isPlayingRecitation
         )
         .onAppear {
             checkBookmark()
@@ -233,7 +272,7 @@ struct VerseRow: View {
             Button(isBookmarked ? "Remove bookmark" : "Add bookmark") {
                 toggleBookmark()
             }
-            Button("Play recitation") {
+            Button(isPlayingRecitation ? "Pause recitation" : "Play recitation") {
                 playRecitation()
             }
             Button("Copy Arabic") {
@@ -244,7 +283,7 @@ struct VerseRow: View {
                     copyTranslation()
                 }
                 #if canImport(AVFoundation)
-                Button(isSpeakingTranslation ? "Stop speaking" : "Speak translation") {
+                Button(isSpeakingTranslation ? "Stop speaking English" : "Speak English translation") {
                     speakTranslation()
                 }
                 #endif
@@ -255,8 +294,10 @@ struct VerseRow: View {
         }
         .onDisappear {
             #if canImport(AVFoundation)
-            stopSpeakingAll()
-            deactivateAudioSession()
+            if isSpeakingTranslation {
+                speechSynth.stopSpeaking(at: .immediate)
+                isSpeakingTranslation = false
+            }
             #endif
         }
         #if canImport(UIKit)
@@ -272,74 +313,25 @@ struct VerseRow: View {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         #endif
         #endif
+
         #if canImport(AVFoundation)
-        speakArabicRecitation()
-        #endif
-    }
-
-    #if canImport(AVFoundation)
-    private func configureAudioSession() {
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setCategory(.playback, options: [.duckOthers, .defaultToSpeaker])
-            try session.setActive(true)
-        } catch {
-            print("AudioSession error: \(error)")
-        }
-    }
-
-    private func deactivateAudioSession() {
-        do {
-            try AVAudioSession.sharedInstance().setActive(false)
-        } catch {
-            print("AudioSession deactivate error: \(error)")
-        }
-    }
-
-    private func stopSpeakingAll() {
-        speechSynth.stopSpeaking(at: .immediate)
-        isSpeakingTranslation = false
-        isSpeakingArabic = false
-    }
-
-    private func speakArabicRecitation() {
-        if isSpeakingArabic {
-            stopSpeakingAll()
-            deactivateAudioSession()
-            return
-        }
-        let text = verse.arabic
-        guard !text.isEmpty else { return }
-        configureAudioSession()
-        if isSpeakingArabic {
+        if isSpeakingTranslation {
             speechSynth.stopSpeaking(at: .immediate)
-            isSpeakingArabic = false
+            isSpeakingTranslation = false
         }
-        let utterance = AVSpeechUtterance(string: text)
-        if let voice = AVSpeechSynthesisVoice(language: "ar-SA") ?? AVSpeechSynthesisVoice(language: "ar") {
-            utterance.voice = voice
-        }
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 0.9
-        utterance.pitchMultiplier = 1.0
-        speechSynth.speak(utterance)
-        isSpeakingArabic = true
+        #endif
+
+        recitationPlayer.togglePlayAyah(surahId: verse.surah, ayahNumber: verse.ayah)
     }
-    #endif
 
     #if canImport(AVFoundation)
     private func speakTranslation() {
         if isSpeakingTranslation {
             speechSynth.stopSpeaking(at: .immediate)
             isSpeakingTranslation = false
-            deactivateAudioSession()
         } else {
             let text = showTranslation ? verse.translation : ""
             guard !text.isEmpty else { return }
-            configureAudioSession()
-            if isSpeakingArabic {
-                speechSynth.stopSpeaking(at: .immediate)
-                isSpeakingArabic = false
-            }
             let utterance = AVSpeechUtterance(string: text)
             if AVSpeechSynthesisVoice(language: "en") != nil {
                 utterance.voice = AVSpeechSynthesisVoice(language: "en")
@@ -390,24 +382,14 @@ struct VerseRow: View {
         var saved = QuranStorageManager.shared.loadBookmarks()
         if isBookmarked {
             saved.removeAll { $0.id == verse.id }
-            isBookmarked = false
         } else {
-            let bookmarkVerse = QuranVerse(
-                id: verse.id,
-                verseKey: verse.verseKey,
-                arabic: verse.arabic,
-                translation: verse.translation,
-                surahName: verse.surahName ?? "Surah \(verse.surah)"
-            )
-            saved.append(bookmarkVerse)
-            isBookmarked = true
+            saved.append(verse)
         }
-
         QuranStorageManager.shared.saveBookmarks(saved)
+        isBookmarked.toggle()
         #if canImport(UIKit)
         #if !targetEnvironment(simulator)
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         #endif
         #endif
     }

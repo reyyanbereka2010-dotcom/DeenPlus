@@ -15,7 +15,7 @@ struct SurahReaderView: View {
     
     @Environment(\.dismiss) private var dismiss
     @StateObject private var quranManager = QuranManager()
-    @StateObject private var recitationPlayer = RecitationPlayer()
+    @ObservedObject private var recitationPlayer = RecitationPlayer.shared
     
     @State private var showJumpToAyah = false
     @State private var showDisplaySettings = false
@@ -137,7 +137,7 @@ struct SurahReaderView: View {
                         Button {
                             recitationPlayer.togglePlay(for: surah)
                         } label: {
-                            Label(recitationPlayer.isPlaying ? "Pause Recitation" : "Play Full Surah", systemImage: recitationPlayer.isPlaying ? "pause.fill" : "play.fill")
+                            Label(recitationPlayer.isPlayingSurah(surahId: surah) ? "Pause Recitation" : "Play Full Surah", systemImage: recitationPlayer.isPlayingSurah(surahId: surah) ? "pause.fill" : "play.fill")
                         }
 
                         Section("Sheikh / Reciter") {
@@ -158,12 +158,12 @@ struct SurahReaderView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: recitationPlayer.isPlaying ? "pause.circle.fill" : "play.circle")
-                            .foregroundStyle(recitationPlayer.isPlaying ? .green : .primary)
+                        Image(systemName: recitationPlayer.isPlayingSurah(surahId: surah) ? "pause.circle.fill" : "play.circle")
+                            .foregroundStyle(recitationPlayer.isPlayingSurah(surahId: surah) ? .green : .primary)
                     } primaryAction: {
                         recitationPlayer.togglePlay(for: surah)
                     }
-                    .accessibilityLabel(recitationPlayer.isPlaying ? "Pause recitation" : "Play recitation (\(recitationPlayer.activeReciter.shortName))")
+                    .accessibilityLabel(recitationPlayer.isPlayingSurah(surahId: surah) ? "Pause recitation" : "Play recitation (\(recitationPlayer.activeReciter.shortName))")
 
                     Button {
                         showDisplaySettings = true
@@ -286,92 +286,70 @@ struct SurahReaderView: View {
                         showDisplaySettings = false
                     }
                     .buttonStyle(.borderedProminent)
-                    .padding(.top, 8)
-
-                    Spacer()
+                    .tint(.green)
                 }
                 .padding()
-                .presentationDetents([.height(340)])
+                .presentationDetents([.fraction(0.45)])
             }
             .sheet(isPresented: $showJumpToAyah) {
-                let performJump: (Int) -> Void = { ayah in
-                    guard ayah > 0 && ayah <= SurahMetadata.get(surah).totalAyahs else {
-                        return
-                    }
-                    
-                    showJumpToAyah = false
-                    highlightedAyahNumber = ayah
-                    saveAyah(ayah)
-                    withAnimation {
-                        proxy.scrollTo(ayah, anchor: .center)
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        withAnimation {
-                            highlightedAyahNumber = nil
-                        }
-                    }
-                    targetAyahInput = ""
-                }
-                
                 VStack(spacing: 20) {
-                    Text("Go to Ayah")
+                    Text("Jump to Ayah")
                         .font(.headline)
                     
-                    TextField("Ayah Number (1-\(SurahMetadata.get(surah).totalAyahs))", text: $targetAyahInput)
+                    TextField("Ayah Number (1-\(quranManager.verses.count))", text: $targetAyahInput)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
-                        .padding()
-                        .submitLabel(.go)
-                        .onSubmit {
-                            if let ayah = Int(targetAyahInput) {
-                                performJump(ayah)
-                            }
-                        }
+                        .padding(.horizontal)
                     
-                    HStack {
+                    HStack(spacing: 16) {
                         Button("Cancel") {
-                            showJumpToAyah = false
                             targetAyahInput = ""
+                            showJumpToAyah = false
                         }
-                        .foregroundStyle(.secondary)
+                        .buttonStyle(.bordered)
                         
-                        Spacer()
-                        
-                        Button("Jump") {
-                            if let ayah = Int(targetAyahInput) {
-                                performJump(ayah)
+                        Button("Go") {
+                            if let target = Int(targetAyahInput), target >= 1, target <= quranManager.verses.count {
+                                showJumpToAyah = false
+                                targetAyahInput = ""
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    withAnimation {
+                                        proxy.scrollTo(target, anchor: .center)
+                                        highlightedAyahNumber = target
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                        withAnimation {
+                                            highlightedAyahNumber = nil
+                                        }
+                                    }
+                                }
                             }
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(Int(targetAyahInput) == nil)
+                        .tint(.green)
                     }
-                    .padding(.horizontal)
-                    
-                    Spacer()
                 }
                 .padding()
-                .presentationDetents([.height(260)])
+                .presentationDetents([.fraction(0.3)])
             }
         }
-    }
-    
-    private func saveAyah(_ ayah: Int) {
-        guard ayah > 0 else { return }
-        currentAyah = ayah
-        let name = surahName ?? SurahMetadata.get(surah).englishName
-        RecentlyReadManager.shared.save(
-            surah: surah,
-            surahName: name,
-            verse: ayah
-        )
     }
     
     private func parseAyahNumber(from verseKey: String) -> Int {
         let parts = verseKey.split(separator: ":")
-        if parts.count == 2, let ayahNum = Int(parts[1]) {
-            return ayahNum
+        if parts.count == 2, let num = Int(parts[1]) {
+            return num
         }
         return 0
+    }
+    
+    private func saveAyah(_ ayah: Int) {
+        guard ayah > 0 else { return }
+        RecentlyReadManager.shared.save(
+            surah: surah,
+            surahName: surahName ?? SurahMetadata.get(surah).englishName,
+            verse: ayah
+        )
     }
 
     struct AyahPositionKey: PreferenceKey {

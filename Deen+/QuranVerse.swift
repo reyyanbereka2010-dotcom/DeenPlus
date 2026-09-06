@@ -16,17 +16,13 @@ struct QuranVerse: Identifiable, Codable, Equatable {
     // New: saves the real Surah name for bookmarks
     var surahName: String?
 
-
-
     var surah: Int {
-
-        Int(
-            verseKey.split(separator: ":").first ?? "1"
-        ) ?? 1
-
+        Int(verseKey.split(separator: ":").first ?? "1") ?? 1
     }
 
-
+    var ayah: Int {
+        Int(verseKey.split(separator: ":").last ?? "1") ?? 1
+    }
 
     init(
         id: Int,
@@ -35,15 +31,12 @@ struct QuranVerse: Identifiable, Codable, Equatable {
         translation: String,
         surahName: String? = nil
     ) {
-
         self.id = id
         self.verseKey = verseKey
         self.arabic = arabic
         self.translation = translation
         self.surahName = surahName
-
     }
-
 }
 
 
@@ -64,15 +57,11 @@ struct QuranAPIVerse: Codable {
     let textUthmani: String?
     let translations: [Translation]?
 
-
     enum CodingKeys: String, CodingKey {
 
         case id
-
         case verseKey = "verse_key"
-
         case textUthmani = "text_uthmani"
-
         case translations
 
     }

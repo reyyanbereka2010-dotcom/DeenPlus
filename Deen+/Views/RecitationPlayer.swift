@@ -45,7 +45,22 @@ enum Reciter: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Base path for the reciter's surah MP3 files
+    /// EveryAyah CDN folder name for per-verse recitation
+    var everyAyahFolder: String {
+        switch self {
+        case .alafasy: return "Alafasy_128kbps"
+        case .sudais: return "Abdurrahmaan_As-Sudais_192kbps"
+        case .abdulbaset: return "Abdul_Basit_Murattal_192kbps"
+        case .ghamdi: return "Ghamadi_40kbps"
+        case .muaiqly: return "Maher_AlMuaiqly_64kbps"
+        case .husary: return "Husary_128kbps"
+        case .minshawi: return "Minshawy_Murattal_128kbps"
+        case .shatri: return "Abu_Bakr_Ash-Shaatree_128kbps"
+        case .rifai: return "Hani_Rifai_192kbps"
+        }
+    }
+
+    /// Base path for the reciter's full surah MP3 files
     var basePath: String {
         switch self {
         case .alafasy: return "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal"
@@ -71,11 +86,23 @@ enum Reciter: String, CaseIterable, Identifiable, Sendable {
             return URL(string: "\(basePath)/\(surahId).mp3")
         }
     }
+
+    /// Returns streaming audio URL for an individual Ayah (e.g. Surah 1, Ayah 1 -> 001001.mp3)
+    func ayahURL(surahId: Int, ayahNumber: Int) -> URL? {
+        guard (1...114).contains(surahId), ayahNumber > 0 else { return nil }
+        let sss = String(format: "%03d", surahId)
+        let aaa = String(format: "%03d", ayahNumber)
+        return URL(string: "https://everyayah.com/data/\(everyAyahFolder)/\(sss)\(aaa).mp3")
+    }
 }
 
 struct RecitationProvider {
     static func surahURL(surahId: Int, reciter: Reciter = .alafasy) -> URL? {
         reciter.surahURL(surahId: surahId)
+    }
+
+    static func ayahURL(surahId: Int, ayahNumber: Int, reciter: Reciter = .alafasy) -> URL? {
+        reciter.ayahURL(surahId: surahId, ayahNumber: ayahNumber)
     }
 }
 
@@ -83,12 +110,16 @@ struct RecitationProvider {
 
 @MainActor
 final class RecitationPlayer: ObservableObject {
+    static let shared = RecitationPlayer()
+
     @Published private(set) var isPlaying: Bool = false
     @Published private(set) var currentSurahId: Int?
+    @Published private(set) var currentAyahNumber: Int?
     @Published var activeReciter: Reciter = .alafasy
 
     private var player: AVPlayer?
     private var endObserver: Any?
+    private var errorObserver: Any?
     private let reciterStorageKey = "selectedQuranReciter"
 
     init() {
@@ -101,21 +132,74 @@ final class RecitationPlayer: ObservableObject {
     }
 
     deinit {
-        if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+        }
+        if let errorObserver {
+            NotificationCenter.default.removeObserver(errorObserver)
+        }
+    }
+
+    private func cleanupObservers() {
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+            self.endObserver = nil
+        }
+        if let errorObserver {
+            NotificationCenter.default.removeObserver(errorObserver)
+            self.errorObserver = nil
+        }
     }
 
     func setReciter(_ reciter: Reciter) {
         guard reciter != activeReciter else { return }
         activeReciter = reciter
         UserDefaults.standard.set(reciter.rawValue, forKey: reciterStorageKey)
-        if isPlaying, let current = currentSurahId {
-            playSurah(surahId: current, reciter: reciter)
+        if isPlaying {
+            if let ayah = currentAyahNumber, let surah = currentSurahId {
+                playAyah(surahId: surah, ayahNumber: ayah, reciter: reciter)
+            } else if let surah = currentSurahId {
+                playSurah(surahId: surah, reciter: reciter)
+            }
         }
+    }
+
+    func isPlayingAyah(surahId: Int, ayahNumber: Int) -> Bool {
+        isPlaying && currentSurahId == surahId && currentAyahNumber == ayahNumber
+    }
+
+    func isPlayingSurah(surahId: Int) -> Bool {
+        isPlaying && currentSurahId == surahId && currentAyahNumber == nil
+    }
+
+    func togglePlayAyah(surahId: Int, ayahNumber: Int, reciter: Reciter? = nil) {
+        if isPlayingAyah(surahId: surahId, ayahNumber: ayahNumber) {
+            pause()
+        } else {
+            playAyah(surahId: surahId, ayahNumber: ayahNumber, reciter: reciter)
+        }
+    }
+
+    func playAyah(surahId: Int, ayahNumber: Int, reciter: Reciter? = nil) {
+        let chosen = reciter ?? activeReciter
+        guard let url = RecitationProvider.ayahURL(surahId: surahId, ayahNumber: ayahNumber, reciter: chosen) else { return }
+        prepareSession()
+        cleanupObservers()
+
+        currentSurahId = surahId
+        currentAyahNumber = ayahNumber
+        activeReciter = chosen
+
+        let item = AVPlayerItem(url: url)
+        player = AVPlayer(playerItem: item)
+        player?.play()
+        isPlaying = true
+        observeEnd()
     }
 
     func togglePlay(for surahId: Int, reciter: Reciter? = nil) {
         let chosen = reciter ?? activeReciter
-        if isPlaying, currentSurahId == surahId {
+        if isPlayingSurah(surahId: surahId) {
             pause()
         } else {
             playSurah(surahId: surahId, reciter: chosen)
@@ -126,11 +210,14 @@ final class RecitationPlayer: ObservableObject {
         let chosen = reciter ?? activeReciter
         guard let url = RecitationProvider.surahURL(surahId: surahId, reciter: chosen) else { return }
         prepareSession()
-        if currentSurahId != surahId || activeReciter != chosen || player == nil {
-            player = AVPlayer(url: url)
-            currentSurahId = surahId
-            activeReciter = chosen
-        }
+        cleanupObservers()
+
+        currentSurahId = surahId
+        currentAyahNumber = nil
+        activeReciter = chosen
+
+        let item = AVPlayerItem(url: url)
+        player = AVPlayer(playerItem: item)
         player?.play()
         isPlaying = true
         observeEnd()
@@ -139,6 +226,14 @@ final class RecitationPlayer: ObservableObject {
     func pause() {
         player?.pause()
         isPlaying = false
+    }
+
+    func stop() {
+        player?.pause()
+        player = nil
+        isPlaying = false
+        currentAyahNumber = nil
+        cleanupObservers()
     }
 
     private func prepareSession() {
@@ -153,8 +248,23 @@ final class RecitationPlayer: ObservableObject {
 
     private func observeEnd() {
         guard let item = player?.currentItem else { return }
-        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-            self?.isPlaying = false
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            self.isPlaying = false
+            self.currentAyahNumber = nil
+        }
+        errorObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemFailedToPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            self.isPlaying = false
+            self.currentAyahNumber = nil
         }
     }
 }
