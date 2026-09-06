@@ -133,6 +133,51 @@ struct RecitationSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                if downloadManager.isBatchDownloading {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label("Downloading Full Quran Audio", systemImage: "arrow.down.circle.fill")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(accent)
+                            Spacer()
+                            Button("Cancel") {
+                                downloadManager.cancelBatchDownload()
+                            }
+                            .font(.caption.bold())
+                            .foregroundStyle(.red)
+                        }
+
+                        ProgressView(value: downloadManager.batchProgress)
+                            .tint(accent)
+
+                        HStack {
+                            Text("Surah \(downloadManager.batchCurrentSurah) of \(downloadManager.batchTotalSurahs)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("\(Int(downloadManager.batchProgress * 100))%")
+                                .font(.caption.bold())
+                                .foregroundStyle(accent)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } else {
+                    Button {
+                        downloadManager.startDownloadAll(reciter: recitationPlayer.activeReciter)
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .foregroundStyle(accent)
+                            Text("Download All 114 Surahs for \(recitationPlayer.activeReciter.shortName)")
+                                .font(.subheadline.weight(.medium))
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Download Surah Audio for Offline Play")
                         .font(.subheadline.weight(.medium))
@@ -212,6 +257,38 @@ struct RecitationSettingsView: View {
             // MARK: - Playback Settings
             Section {
                 Toggle("Continuous Ayah Playback", isOn: $continuousAudio)
+
+                Picker("Playback Speed", selection: Binding(
+                    get: { recitationPlayer.playbackSpeed },
+                    set: { recitationPlayer.setPlaybackSpeed($0) }
+                )) {
+                    Text("0.75x").tag(Float(0.75))
+                    Text("1.0x (Normal)").tag(Float(1.0))
+                    Text("1.25x").tag(Float(1.25))
+                    Text("1.5x").tag(Float(1.5))
+                }
+
+                Picker("Ayah Repeat", selection: Binding(
+                    get: { recitationPlayer.repeatCount },
+                    set: { recitationPlayer.setRepeatCount($0) }
+                )) {
+                    Text("1x (Play Once)").tag(1)
+                    Text("2x").tag(2)
+                    Text("3x").tag(3)
+                    Text("5x").tag(5)
+                    Text("Loop Ayah (∞)").tag(0)
+                }
+
+                Picker("Sleep Timer", selection: Binding(
+                    get: { recitationPlayer.sleepTimerRemainingMinutes },
+                    set: { recitationPlayer.setSleepTimer(minutes: $0) }
+                )) {
+                    Text("Off").tag(0)
+                    Text("15 Minutes").tag(15)
+                    Text("30 Minutes").tag(30)
+                    Text("45 Minutes").tag(45)
+                    Text("60 Minutes").tag(60)
+                }
             } header: {
                 Label("Playback Options", systemImage: "slider.horizontal.3")
             }

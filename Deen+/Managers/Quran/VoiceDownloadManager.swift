@@ -16,6 +16,13 @@ final class VoiceDownloadManager: ObservableObject {
     @Published var downloadProgress: [String: Double] = [:]
     @Published var downloadedSurahKeys: Set<String> = []
     @Published var totalDiskUsageFormatted: String = "0 MB"
+    @Published var isBatchDownloading: Bool = false
+    @Published var batchProgress: Double = 0.0
+    @Published var batchCurrentSurah: Int = 0
+    @Published var batchTotalSurahs: Int = 114
+    @Published var batchReciterName: String = ""
+
+    private var batchTask: Task<Void, Never>? = nil
 
     private let fileManager = FileManager.default
 
@@ -74,6 +81,59 @@ final class VoiceDownloadManager: ObservableObject {
 
     func isDownloading(key: String) -> Bool {
         activeDownloads.contains(key)
+    }
+
+    // MARK: - Batch Download Operations
+
+    func startDownloadAll(reciter: Reciter) {
+        guard !isBatchDownloading else { return }
+        isBatchDownloading = true
+        batchProgress = 0.0
+        batchCurrentSurah = 1
+        batchTotalSurahs = 114
+        batchReciterName = reciter.shortName
+
+        batchTask = Task { @MainActor in
+            for surahId in 1...114 {
+                if Task.isCancelled { break }
+
+                self.batchCurrentSurah = surahId
+                self.batchProgress = Double(surahId - 1) / 114.0
+
+                if self.isReciterSurahDownloaded(reciter: reciter, surahId: surahId) {
+                    continue
+                }
+
+                guard let remoteURL = reciter.surahURL(surahId: surahId) else { continue }
+                let destURL = self.reciterSurahURL(reciter: reciter, surahId: surahId)
+
+                do {
+                    let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
+                    if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
+                        if FileManager.default.fileExists(atPath: destURL.path) {
+                            try? FileManager.default.removeItem(at: destURL)
+                        }
+                        try FileManager.default.moveItem(at: tempURL, to: destURL)
+                        self.downloadedSurahKeys.insert("reciter_\(reciter.rawValue)_\(surahId)")
+                    }
+                } catch {
+                    #if DEBUG
+                    print("Download error for surah \(surahId):", error)
+                    #endif
+                }
+            }
+
+            self.isBatchDownloading = false
+            self.batchProgress = 1.0
+            self.refreshDownloadedIndex()
+        }
+    }
+
+    func cancelBatchDownload() {
+        batchTask?.cancel()
+        batchTask = nil
+        isBatchDownloading = false
+        refreshDownloadedIndex()
     }
 
     // MARK: - Download Operations

@@ -262,6 +262,43 @@ struct SurahReaderView: View {
 
                         Spacer()
 
+                        Menu {
+                            Section("Playback Speed") {
+                                Button("0.75x") { recitationPlayer.setPlaybackSpeed(0.75) }
+                                Button("1.0x (Normal)") { recitationPlayer.setPlaybackSpeed(1.0) }
+                                Button("1.25x") { recitationPlayer.setPlaybackSpeed(1.25) }
+                                Button("1.5x") { recitationPlayer.setPlaybackSpeed(1.5) }
+                            }
+                            Section("Ayah Repeat") {
+                                Button("1x (Play Once)") { recitationPlayer.setRepeatCount(1) }
+                                Button("2x") { recitationPlayer.setRepeatCount(2) }
+                                Button("3x") { recitationPlayer.setRepeatCount(3) }
+                                Button("5x") { recitationPlayer.setRepeatCount(5) }
+                                Button("Loop Ayah (∞)") { recitationPlayer.setRepeatCount(0) }
+                            }
+                            Section("Sleep Timer") {
+                                Button("Off") { recitationPlayer.setSleepTimer(minutes: 0) }
+                                Button("15 Minutes") { recitationPlayer.setSleepTimer(minutes: 15) }
+                                Button("30 Minutes") { recitationPlayer.setSleepTimer(minutes: 30) }
+                                Button("45 Minutes") { recitationPlayer.setSleepTimer(minutes: 45) }
+                                Button("60 Minutes") { recitationPlayer.setSleepTimer(minutes: 60) }
+                            }
+                        } label: {
+                            HStack(spacing: 3) {
+                                Text(String(format: "%.2gx", recitationPlayer.playbackSpeed))
+                                    .font(.system(size: 10, weight: .bold))
+                                if recitationPlayer.repeatCount != 1 {
+                                    Text(recitationPlayer.repeatCount == 0 ? "∞" : "\(recitationPlayer.repeatCount)x")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(Color.green)
+                                }
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.primary.opacity(0.08), in: Capsule())
+                            .foregroundStyle(Color.primary)
+                        }
+
                         HStack(spacing: 12) {
                             Button {
                                 recitationPlayer.previousAyah()
@@ -491,6 +528,40 @@ struct SurahReaderView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityLabel("Preview translation voice")
+                            }
+                        }
+
+                        Section("Recitation Playback Options") {
+                            Picker("Playback Speed", selection: Binding(
+                                get: { recitationPlayer.playbackSpeed },
+                                set: { recitationPlayer.setPlaybackSpeed($0) }
+                            )) {
+                                Text("0.75x").tag(Float(0.75))
+                                Text("1.0x (Normal)").tag(Float(1.0))
+                                Text("1.25x").tag(Float(1.25))
+                                Text("1.5x").tag(Float(1.5))
+                            }
+
+                            Picker("Ayah Repeat", selection: Binding(
+                                get: { recitationPlayer.repeatCount },
+                                set: { recitationPlayer.setRepeatCount($0) }
+                            )) {
+                                Text("1x (Play Once)").tag(1)
+                                Text("2x").tag(2)
+                                Text("3x").tag(3)
+                                Text("5x").tag(5)
+                                Text("Loop Ayah (∞)").tag(0)
+                            }
+
+                            Picker("Sleep Timer", selection: Binding(
+                                get: { recitationPlayer.sleepTimerRemainingMinutes },
+                                set: { recitationPlayer.setSleepTimer(minutes: $0) }
+                            )) {
+                                Text("Off").tag(0)
+                                Text("15 Minutes").tag(15)
+                                Text("30 Minutes").tag(30)
+                                Text("45 Minutes").tag(45)
+                                Text("60 Minutes").tag(60)
                             }
                         }
 

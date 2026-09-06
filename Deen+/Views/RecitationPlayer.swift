@@ -117,6 +117,12 @@ final class RecitationPlayer: ObservableObject {
     @Published private(set) var currentAyahNumber: Int?
     @Published private(set) var isContinuousPlayback: Bool = false
     @Published var activeReciter: Reciter = .alafasy
+    @Published var playbackSpeed: Float = 1.0
+    @Published var repeatCount: Int = 1
+    @Published var sleepTimerRemainingMinutes: Int = 0
+
+    private var currentAyahPlayCount: Int = 1
+    private var sleepTimerTask: Task<Void, Never>? = nil
 
     private(set) var totalAyahsForCurrentSurah: Int = 0
     private var player: AVPlayer?
@@ -130,6 +136,14 @@ final class RecitationPlayer: ObservableObject {
             self.activeReciter = reciter
         } else {
             self.activeReciter = .alafasy
+        }
+        let speed = UserDefaults.standard.float(forKey: "quranAudioPlaybackSpeed")
+        if speed >= 0.5 && speed <= 2.0 {
+            self.playbackSpeed = speed
+        }
+        let repeats = UserDefaults.standard.integer(forKey: "quranAudioRepeatCount")
+        if repeats > 0 {
+            self.repeatCount = repeats
         }
     }
 
@@ -150,6 +164,37 @@ final class RecitationPlayer: ObservableObject {
         if let errorObserver {
             NotificationCenter.default.removeObserver(errorObserver)
             self.errorObserver = nil
+        }
+    }
+
+    func setPlaybackSpeed(_ speed: Float) {
+        playbackSpeed = speed
+        UserDefaults.standard.set(speed, forKey: "quranAudioPlaybackSpeed")
+        if isPlaying {
+            player?.rate = speed
+        }
+    }
+
+    func setRepeatCount(_ count: Int) {
+        repeatCount = count
+        UserDefaults.standard.set(count, forKey: "quranAudioRepeatCount")
+    }
+
+    func setSleepTimer(minutes: Int) {
+        sleepTimerTask?.cancel()
+        sleepTimerRemainingMinutes = minutes
+        guard minutes > 0 else { return }
+
+        sleepTimerTask = Task { @MainActor in
+            var remaining = minutes * 60
+            while remaining > 0 {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if Task.isCancelled { return }
+                remaining -= 1
+                self.sleepTimerRemainingMinutes = max(0, (remaining + 59) / 60)
+            }
+            self.pause()
+            self.sleepTimerRemainingMinutes = 0
         }
     }
 
@@ -242,7 +287,7 @@ final class RecitationPlayer: ObservableObject {
 
         let item = AVPlayerItem(url: url)
         player = AVPlayer(playerItem: item)
-        player?.play()
+        player?.playImmediately(atRate: playbackSpeed)
         isPlaying = true
         observeEnd()
     }
@@ -253,7 +298,7 @@ final class RecitationPlayer: ObservableObject {
     }
 
     func resume() {
-        player?.play()
+        player?.playImmediately(atRate: playbackSpeed)
         isPlaying = true
     }
 
@@ -284,6 +329,14 @@ final class RecitationPlayer: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             guard let self = self else { return }
+            if self.repeatCount == 0 || self.currentAyahPlayCount < self.repeatCount {
+                self.currentAyahPlayCount += 1
+                self.player?.seek(to: .zero)
+                self.player?.playImmediately(atRate: self.playbackSpeed)
+                return
+            }
+            self.currentAyahPlayCount = 1
+
             if self.isContinuousPlayback,
                let surah = self.currentSurahId,
                let currentAyah = self.currentAyahNumber,
