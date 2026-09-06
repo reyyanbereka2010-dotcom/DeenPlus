@@ -158,71 +158,203 @@ struct CustomBottomMenuBar: View {
     @Binding var selectedTab: Int
     let style: String
     @AppStorage("appAccentColor") private var appAccentColor: String = "emerald"
+    @AppStorage("menuBarShowLabels") private var menuBarShowLabels: Bool = true
+    @AppStorage("menuBarHaptics") private var menuBarHaptics: Bool = true
+    @AppStorage("menuBarIndicator") private var menuBarIndicator: String = "pill"
 
     private var accent: Color {
         AppAccentColor(rawValue: appAccentColor)?.color ?? .green
     }
 
+    private var shouldShowLabels: Bool {
+        style != "compact" && menuBarShowLabels
+    }
+
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: style == "compact" ? 10 : 2) {
             ForEach(TabItemType.allCases) { item in
+                let isSelected = selectedTab == item.rawValue
+
                 Button {
-                    #if canImport(UIKit)
-                    let impact = UIImpactFeedbackGenerator(style: .light)
-                    impact.impactOccurred()
-                    #endif
+                    if menuBarHaptics {
+                        #if canImport(UIKit)
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
+                        #endif
+                    }
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                         selectedTab = item.rawValue
                     }
                 } label: {
-                    VStack(spacing: 4) {
+                    VStack(spacing: shouldShowLabels ? 3 : 0) {
                         ZStack {
-                            if selectedTab == item.rawValue {
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(accent.opacity(0.18))
-                                    .frame(width: 40, height: 32)
+                            if isSelected {
+                                switch menuBarIndicator {
+                                case "pill":
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(accent.opacity(0.18))
+                                        .frame(width: shouldShowLabels ? 38 : 42, height: shouldShowLabels ? 30 : 38)
+                                case "glow":
+                                    Circle()
+                                        .fill(accent.opacity(0.35))
+                                        .frame(width: 34, height: 34)
+                                        .blur(radius: 5)
+                                default:
+                                    EmptyView()
+                                }
                             }
 
                             Image(systemName: item.icon)
-                                .font(.system(size: 16, weight: selectedTab == item.rawValue ? .semibold : .regular))
-                                .foregroundStyle(selectedTab == item.rawValue ? accent : Color.secondary)
+                                .font(.system(size: shouldShowLabels ? 16 : 19, weight: isSelected ? .semibold : .regular))
+                                .foregroundStyle(isSelected ? accent : Color.secondary)
                         }
-                        .frame(height: 32)
+                        .frame(height: shouldShowLabels ? 30 : 38)
 
-                        Text(item.title)
-                            .font(.system(size: 10, weight: selectedTab == item.rawValue ? .bold : .medium))
-                            .foregroundStyle(selectedTab == item.rawValue ? accent : Color.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                        if shouldShowLabels {
+                            Text(item.title)
+                                .font(.system(size: 10, weight: isSelected ? .bold : .medium))
+                                .foregroundStyle(isSelected ? accent : Color.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+
+                        if isSelected {
+                            if menuBarIndicator == "dot" {
+                                Circle()
+                                    .fill(accent)
+                                    .frame(width: 4, height: 4)
+                                    .padding(.top, shouldShowLabels ? 1 : 2)
+                            } else if menuBarIndicator == "line" {
+                                Capsule()
+                                    .fill(accent)
+                                    .frame(width: 16, height: 2.5)
+                                    .padding(.top, shouldShowLabels ? 1 : 2)
+                            }
+                        } else if menuBarIndicator == "dot" || menuBarIndicator == "line" {
+                            Color.clear
+                                .frame(height: shouldShowLabels ? 5 : 6)
+                        }
                     }
                     .frame(maxWidth: .infinity)
+                    .offset(y: style == "dock" && isSelected ? -4 : 0)
+                    .scaleEffect(style == "dock" && isSelected ? 1.08 : 1.0)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.top, 10)
-        .padding(.bottom, style == "floating" ? 12 : 28)
+        .padding(.horizontal, style == "minimal" ? 4 : (style == "compact" ? 16 : 8))
+        .padding(.top, style == "compact" ? 8 : 10)
+        .padding(.bottom, bottomInnerPadding)
         .background(
+            barBackgroundView
+        )
+        .padding(.horizontal, outerHorizontalPadding)
+        .padding(.bottom, outerBottomPadding)
+    }
+
+    private var bottomInnerPadding: CGFloat {
+        switch style {
+        case "floating", "glass", "compact":
+            return 10
+        case "dock":
+            return 12
+        case "minimal":
+            return 26
+        default:
+            return 28
+        }
+    }
+
+    private var outerHorizontalPadding: CGFloat {
+        switch style {
+        case "floating", "glass":
+            return 14
+        case "compact":
+            return 24
+        case "dock":
+            return 12
+        case "minimal":
+            return 0
+        default:
+            return 8
+        }
+    }
+
+    private var outerBottomPadding: CGFloat {
+        switch style {
+        case "floating", "compact":
+            return 12
+        case "glass":
+            return 14
+        case "dock":
+            return 10
+        case "minimal":
+            return 0
+        default:
+            return 0
+        }
+    }
+
+    @ViewBuilder
+    private var barBackgroundView: some View {
+        switch style {
+        case "floating":
             ZStack {
-                if style == "floating" {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                } else {
-                    // Modern Rectangular Pill Bar
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(.regularMaterial)
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.primary.opacity(0.07), lineWidth: 1)
-                }
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             }
             .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: -2)
-        )
-        .padding(.horizontal, style == "floating" ? 14 : 10)
-        .padding(.bottom, style == "floating" ? 12 : 0)
+
+        case "glass":
+            ZStack {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(accent.opacity(0.06))
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(accent.opacity(0.32), lineWidth: 1.2)
+            }
+            .shadow(color: accent.opacity(0.22), radius: 16, x: 0, y: 4)
+
+        case "minimal":
+            ZStack(alignment: .top) {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                Rectangle()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(height: 0.5)
+            }
+
+        case "dock":
+            ZStack {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.regularMaterial)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 3)
+
+        case "compact":
+            ZStack {
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                Capsule()
+                    .stroke(Color.primary.opacity(0.09), lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 2)
+
+        default:
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(.regularMaterial)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(0.07), lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(0.10), radius: 12, x: 0, y: -2)
+        }
     }
 }
 

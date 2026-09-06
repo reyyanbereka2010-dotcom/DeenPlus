@@ -453,7 +453,7 @@ struct SurahReaderView: View {
                             NavigationLink {
                                 RecitationSettingsView()
                             } label: {
-                                Label("Manage Voices & Audio Downloads", systemImage: "waveform.badge.mic")
+                                Label("Recitation & Voices", systemImage: "waveform.badge.mic")
                                     .foregroundStyle(Color.green)
                             }
                             HStack {
@@ -575,7 +575,7 @@ struct SurahReaderView: View {
                             NavigationLink {
                                 AppearanceSettingsView()
                             } label: {
-                                Label("Global App Theme & Appearance", systemImage: "paintbrush.fill")
+                                Label("Theme & Appearance", systemImage: "paintbrush.fill")
                                     .foregroundStyle(Color.purple)
                             }
                         }

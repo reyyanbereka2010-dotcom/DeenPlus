@@ -35,6 +35,12 @@ struct SettingsView: View {
     @AppStorage("menuBarStyle")
     private var menuBarStyle: String = "pill"
 
+    private var appVersionString: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.9"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "11"
+        return "\(version) (\(build))"
+    }
+
     @AppStorage("prayerNotificationsEnabled")
     private var prayerNotificationsEnabled: Bool = false
 
@@ -355,8 +361,12 @@ struct SettingsView: View {
                     }
 
                     Picker("Menu Bar Style", selection: $menuBarStyle) {
-                        Text("Modern Pill / Rectangle").tag("pill")
+                        Text("Modern Pill").tag("pill")
                         Text("Floating Capsule").tag("floating")
+                        Text("Frosted Glass").tag("glass")
+                        Text("Minimalist Bar").tag("minimal")
+                        Text("Elevated Dock").tag("dock")
+                        Text("Compact Icons").tag("compact")
                         Text("Standard Tab Bar").tag("standard")
                     }
                 } header: {
@@ -417,7 +427,7 @@ struct SettingsView: View {
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text("1.1.8 (10)")
+                        Text(appVersionString)
                             .foregroundStyle(.secondary)
                     }
 

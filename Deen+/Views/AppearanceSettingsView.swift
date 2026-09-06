@@ -11,13 +11,18 @@ struct AppearanceSettingsView: View {
     @AppStorage("appTheme") private var appTheme: String = "System"
     @AppStorage("appAccentColor") private var appAccentColor: String = "emerald"
     @AppStorage("menuBarStyle") private var menuBarStyle: String = "pill"
+    @AppStorage("menuBarShowLabels") private var menuBarShowLabels: Bool = true
+    @AppStorage("menuBarHaptics") private var menuBarHaptics: Bool = true
+    @AppStorage("menuBarIndicator") private var menuBarIndicator: String = "pill"
+
     @AppStorage("quranReadingTheme") private var quranReadingTheme: String = "standard"
     @AppStorage("quranArabicFontSize") private var quranArabicFontSize: Double = 26
     @AppStorage("quranTranslationFontSize") private var quranTranslationFontSize: Double = 16
-    @AppStorage("quranShowTranslation") private var quranShowTranslation: Bool = true
-    @AppStorage("quranKeepScreenAwake") private var quranKeepScreenAwake: Bool = true
+    @AppStorage("quranShowTranslation") private var showTranslation: Bool = true
+    @AppStorage("quranKeepScreenAwake") private var keepScreenAwake: Bool = true
 
     @Environment(\.colorScheme) private var colorScheme
+    @State private var previewTab: Int = 0
 
     private var activeAccent: Color {
         AppAccentColor(rawValue: appAccentColor)?.color ?? .green
@@ -29,33 +34,6 @@ struct AppearanceSettingsView: View {
 
     var body: some View {
         Form {
-            // MARK: - Hero Header
-            Section {
-                HStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [activeAccent.opacity(0.85), Color.purple],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 56, height: 56)
-                            .shadow(color: activeAccent.opacity(0.3), radius: 8, x: 0, y: 3)
-
-                        Image(systemName: "paintbrush.fill")
-                            .font(.system(size: 24))
-                            .foregroundStyle(.white)
-                    }
-
-                    Text("Theme & Appearance")
-                        .font(.headline.bold())
-                        .foregroundStyle(.primary)
-                }
-                .padding(.vertical, 4)
-            }
-
             // MARK: - App Color Scheme
             Section {
                 HStack(spacing: 12) {
@@ -67,8 +45,6 @@ struct AppearanceSettingsView: View {
             } header: {
                 Label("App Color Mode", systemImage: "circle.lefthalf.filled")
                     .foregroundStyle(activeAccent)
-            } footer: {
-                Text("Select System to automatically mirror your iPhone's appearance settings.")
             }
 
             // MARK: - Global Accent Color
@@ -114,23 +90,50 @@ struct AppearanceSettingsView: View {
             } header: {
                 Label("Global Accent Tint", systemImage: "paintpalette.fill")
                     .foregroundStyle(activeAccent)
-            } footer: {
-                Text("Applies to buttons, navigation highlights, active prayer indicators, and badges throughout the app.")
             }
 
-            // MARK: - Navigation Menu Bar Style
+            // MARK: - Navigation Menu Bar Customization
             Section {
+                // Live Interactive Menu Bar Preview
+                VStack(spacing: 8) {
+                    CustomBottomMenuBar(
+                        selectedTab: $previewTab,
+                        style: menuBarStyle
+                    )
+                    .disabled(true)
+                    .scaleEffect(0.92)
+                    .frame(height: menuBarStyle == "compact" ? 52 : 64)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+
                 Picker("Menu Bar Style", selection: $menuBarStyle) {
-                    Text("Modern Pill / Rectangle").tag("pill")
+                    Text("Modern Pill").tag("pill")
                     Text("Floating Capsule").tag("floating")
+                    Text("Frosted Glass Island").tag("glass")
+                    Text("Minimalist Bar").tag("minimal")
+                    Text("Elevated Dock").tag("dock")
+                    Text("Compact Icons").tag("compact")
                     Text("Standard Tab Bar").tag("standard")
                 }
-                .pickerStyle(.menu)
+
+                if menuBarStyle != "standard" {
+                    Picker("Active Tab Indicator", selection: $menuBarIndicator) {
+                        Text("Pill Background").tag("pill")
+                        Text("Indicator Dot").tag("dot")
+                        Text("Accent Glow").tag("glow")
+                        Text("Underline").tag("line")
+                    }
+
+                    if menuBarStyle != "compact" {
+                        Toggle("Show Tab Text Labels", isOn: $menuBarShowLabels)
+                    }
+
+                    Toggle("Tactile Haptic Feedback", isOn: $menuBarHaptics)
+                }
             } header: {
-                Label("Navigation Bar Style", systemImage: "menubar.rectangle")
+                Label("Navigation Menu Bar", systemImage: "menubar.rectangle")
                     .foregroundStyle(activeAccent)
-            } footer: {
-                Text("Choose between an elevated modern pill, floating capsule, or native iOS bottom tab bar.")
             }
 
             // MARK: - Quran Reader Theme Preview & Selection
@@ -153,7 +156,7 @@ struct AppearanceSettingsView: View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
 
-                    if quranShowTranslation {
+                    if showTranslation {
                         Text("In the name of Allah, the Entirely Merciful, the Especially Merciful.")
                             .font(.system(size: CGFloat(quranTranslationFontSize)))
                             .foregroundStyle(activeReaderTheme.secondaryTextColor(colorScheme: colorScheme))
@@ -241,11 +244,9 @@ struct AppearanceSettingsView: View {
             } header: {
                 Label("Quran Reader Theme", systemImage: "book.pages.fill")
                     .foregroundStyle(activeAccent)
-            } footer: {
-                Text("Warm Sepia emulates physical Mushaf paper, while AMOLED Night saves battery and prevents glare.")
             }
 
-            // MARK: - Font Sizing
+            // MARK: - Typography Sizing
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -279,8 +280,8 @@ struct AppearanceSettingsView: View {
 
             // MARK: - Reader Display Preferences
             Section {
-                Toggle("Show English Translation", isOn: $quranShowTranslation)
-                Toggle("Keep Screen Awake in Reader", isOn: $quranKeepScreenAwake)
+                Toggle("Show English Translation", isOn: $showTranslation)
+                Toggle("Keep Screen Awake in Reader", isOn: $keepScreenAwake)
             } header: {
                 Label("Reader Display", systemImage: "eye.fill")
                     .foregroundStyle(activeAccent)
@@ -301,28 +302,19 @@ struct AppearanceSettingsView: View {
         } label: {
             VStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundStyle(isSelected ? activeAccent : Color.secondary)
+                    .frame(height: 28)
 
                 Text(title)
                     .font(.caption.weight(isSelected ? .bold : .medium))
                     .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(activeAccent)
-                } else {
-                    Circle()
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                        .frame(width: 12, height: 12)
-                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? activeAccent.opacity(0.12) : Color(.secondarySystemBackground))
+                    .fill(isSelected ? activeAccent.opacity(0.12) : Color.secondary.opacity(0.08))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)

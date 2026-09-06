@@ -27,32 +27,6 @@ struct RecitationSettingsView: View {
 
     var body: some View {
         Form {
-            // MARK: - Hero Header
-            Section {
-                HStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [accent.opacity(0.85), Color.teal],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 56, height: 56)
-                            .shadow(color: accent.opacity(0.3), radius: 8, x: 0, y: 3)
-
-                        Image(systemName: "waveform.badge.mic")
-                            .font(.system(size: 24))
-                            .foregroundStyle(.white)
-                    }
-
-                    Text("Recitation & Voices")
-                        .font(.headline.bold())
-                        .foregroundStyle(.primary)
-                }
-                .padding(.vertical, 4)
-            }
 
             // MARK: - Arabic Reciters (Sheikhs)
             Section {
@@ -95,8 +69,6 @@ struct RecitationSettingsView: View {
             } header: {
                 Label("Arabic Sheikhs", systemImage: "person.wave.2.fill")
                     .foregroundStyle(accent)
-            } footer: {
-                Text("Tap play to preview Al-Fatihah, or tap the Sheikh name to set as your primary recitation voice.")
             }
 
             // MARK: - Authentic Muslim Translation Narrators
@@ -147,10 +119,8 @@ struct RecitationSettingsView: View {
                     .buttonStyle(.plain)
                 }
             } header: {
-                Label("Translation Voices (100% Muslim Scholars)", systemImage: "person.crop.circle.badge.waveform")
+                Label("Translation Voices", systemImage: "person.crop.circle.badge.waveform")
                     .foregroundStyle(.blue)
-            } footer: {
-                Text("No synthetic robot text-to-speech. Features authentic human studio recordings from respected Muslim reciters.")
             }
 
             // MARK: - Offline Voice Audio Downloader
@@ -237,8 +207,6 @@ struct RecitationSettingsView: View {
             } header: {
                 Label("Offline Voice Audio Downloads", systemImage: "arrow.down.circle.fill")
                     .foregroundStyle(Color.indigo)
-            } footer: {
-                Text("Downloaded audio files play automatically without requiring WiFi or cellular data.")
             }
 
             // MARK: - Playback Settings
@@ -246,8 +214,6 @@ struct RecitationSettingsView: View {
                 Toggle("Continuous Ayah Playback", isOn: $continuousAudio)
             } header: {
                 Label("Playback Options", systemImage: "slider.horizontal.3")
-            } footer: {
-                Text("When enabled, audio automatically advances to the next verse after the current one completes.")
             }
         }
         .navigationTitle("Recitation & Voices")
