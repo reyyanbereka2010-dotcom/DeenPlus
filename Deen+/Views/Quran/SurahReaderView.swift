@@ -109,8 +109,8 @@ struct SurahReaderView: View {
                                 .padding(.top, 60)
                             } else {
                                 LazyVStack(spacing: 16) {
-                                    ForEach(quranManager.verses) { verse in
-                                        let ayah = parseAyahNumber(from: verse.verseKey)
+                                    ForEach(quranManager.verses, id: \.ayah) { verse in
+                                        let ayah = verse.ayah
                                         
                                         VerseRow(
                                             verse: verse,
@@ -200,6 +200,12 @@ struct SurahReaderView: View {
                     .padding(.bottom, recitationPlayer.currentSurahId == surah && recitationPlayer.currentAyahNumber != nil ? 110 : 80)
                 }
                 .coordinateSpace(name: "scroll")
+                .onChange(of: quranManager.verses) { verses in
+                    guard !verses.isEmpty, !hasFinishedInitialScroll else { return }
+                    if let target = resumeVerse ?? highlightVerse, target > 0 {
+                        scrollToTargetAyah(target, proxy: proxy)
+                    }
+                }
                 .onPreferenceChange(AyahPositionPreferenceKey.self) { positions in
                     guard hasFinishedInitialScroll, !positions.isEmpty else {
                         return
@@ -646,8 +652,10 @@ struct SurahReaderView: View {
         currentAyah = target
         highlightedAyahNumber = target
 
-        // Pass 1: Immediate un-animated jump to force LazyVStack to instantiate intermediate rows
-        proxy.scrollTo(target, anchor: .top)
+        // Short delay to ensure LazyVStack has mounted newly loaded verses
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            // Pass 1: Immediate jump to force LazyVStack to instantiate intermediate rows
+            proxy.scrollTo(target, anchor: .top)
 
         // Staged iterative adjustments as SwiftUI calculates real verse heights
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
@@ -679,6 +687,7 @@ struct SurahReaderView: View {
                     }
                 }
             }
+        }
         }
     }
 
