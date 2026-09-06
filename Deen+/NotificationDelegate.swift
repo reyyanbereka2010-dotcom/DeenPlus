@@ -16,13 +16,15 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     private override init() { super.init() }
 
     // Called when a notification arrives while the app is foregrounded
-    func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                willPresent notification: UNNotification,
-                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
         let identifier = notification.request.identifier
-        if prayerIdentifiers.contains(identifier) {
+        if prayerIdentifiers.contains(identifier) || identifier == "TestPrayerNotification" {
             // Play athan sound/haptic in-app
-            NotificationManager.shared.handleForegroundAthan(for: identifier)
+            NotificationManager.shared.handleForegroundAthan(for: identifier == "TestPrayerNotification" ? "Fajr" : identifier)
             // Show the notification as a banner with sound
             completionHandler([.sound, .banner])
         } else {
@@ -30,6 +32,12 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    // You can also handle response if needed:
-    // func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) { completionHandler() }
+    // Handle user tapping on the notification
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        completionHandler()
+    }
 }

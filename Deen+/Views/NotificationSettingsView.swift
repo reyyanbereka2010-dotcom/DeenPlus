@@ -1,6 +1,15 @@
-// Refactored for type-checking reliability.
+//
+//  NotificationSettingsView.swift
+//  Deen+
+//
+//  Created by Reyyan Bereka on 7/22/26.
+//
+
 import SwiftUI
 import UserNotifications
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct NotificationSettingsView: View {
     @EnvironmentObject var prayerManager: PrayerManager
@@ -25,9 +34,16 @@ struct NotificationSettingsView: View {
     // State for audio previewing
     @State private var previewingOption: NotificationSoundOption? = nil
 
+    // State for test notification
+    @State private var isSendingTest = false
+    @State private var testSent = false
+    @State private var testErrorMessage: String? = nil
+    @State private var showTestErrorAlert = false
+
     var body: some View {
         Form {
             statusSection
+            testNotificationSection
             soundSection
             prayerSection
             athanHapticSection
@@ -39,6 +55,12 @@ struct NotificationSettingsView: View {
         .onDisappear {
             NotificationManager.shared.stopPreview()
             previewingOption = nil
+        }
+        .alert("Notification Permission", isPresented: $showTestErrorAlert) {
+            Button("Open iOS Settings") { openSystemSettings() }
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(testErrorMessage ?? "Please enable notifications in iOS Settings.")
         }
     }
 
@@ -63,6 +85,38 @@ struct NotificationSettingsView: View {
                 }
         } header: {
             Text("Status")
+        }
+    }
+
+    private var testNotificationSection: some View {
+        Section {
+            Button {
+                triggerTestNotification()
+            } label: {
+                HStack {
+                    Label(
+                        isSendingTest ? "Scheduling Test in 3s..." : "Send Test Notification (3s)",
+                        systemImage: isSendingTest ? "hourglass" : "bell.and.waveform.fill"
+                    )
+                    .foregroundStyle(isSendingTest ? Color.secondary : Color.green)
+
+                    Spacer()
+
+                    if testSent {
+                        Text("Scheduled!")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.green.opacity(0.14), in: Capsule())
+                    }
+                }
+            }
+            .disabled(isSendingTest)
+        } header: {
+            Text("Test Notifications")
+        } footer: {
+            Text("Triggers a test alert in 3 seconds using your selected sound. You can lock your phone or stay in the app to test banner and Adhan audio.")
         }
     }
 
@@ -165,6 +219,29 @@ struct NotificationSettingsView: View {
         }
     }
 
+    private func triggerTestNotification() {
+        isSendingTest = true
+        testSent = false
+        NotificationManager.shared.sendTestNotification(delay: 3) { success, errorMessage in
+            isSendingTest = false
+            if success {
+                testSent = true
+                #if canImport(UIKit)
+                #if !targetEnvironment(simulator)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                #endif
+                #endif
+                refreshAuthorizationStatus()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                    testSent = false
+                }
+            } else if let error = errorMessage {
+                testErrorMessage = error
+                showTestErrorAlert = true
+            }
+        }
+    }
+
     private func togglePreview(for option: NotificationSoundOption) {
         if previewingOption == option {
             NotificationManager.shared.stopPreview()
@@ -199,33 +276,28 @@ struct NotificationSettingsView: View {
 
     private func textForStatus(_ status: UNAuthorizationStatus) -> String {
         switch status {
-        case .authorized: return "Authorized"
-        case .denied: return "Denied"
         case .notDetermined: return "Not Determined"
+        case .denied: return "Denied"
+        case .authorized: return "Authorized"
         case .provisional: return "Provisional"
         case .ephemeral: return "Ephemeral"
         @unknown default: return "Unknown"
         }
     }
 
-    private func iconNameForStatus(_ status: UNAuthorizationStatus) -> String {
+    private func colorForStatus(_ status: UNAuthorizationStatus) -> Color {
         switch status {
-        case .authorized: return "checkmark.seal.fill"
-        case .denied: return "xmark.seal.fill"
-        case .notDetermined: return "questionmark.app.fill"
-        case .provisional: return "hourglass"
-        case .ephemeral: return "bolt.badge.clock"
-        @unknown default: return "questionmark"
+        case .authorized, .provisional: return .green
+        case .denied: return .red
+        default: return .secondary
         }
     }
 
-    private func colorForStatus(_ status: UNAuthorizationStatus) -> Color {
+    private func iconNameForStatus(_ status: UNAuthorizationStatus) -> String {
         switch status {
-        case .authorized: return .green
-        case .denied: return .red
-        case .notDetermined: return .orange
-        case .provisional, .ephemeral: return .yellow
-        @unknown default: return .secondary
+        case .authorized, .provisional: return "checkmark.circle.fill"
+        case .denied: return "xmark.circle.fill"
+        default: return "questionmark.circle.fill"
         }
     }
 }

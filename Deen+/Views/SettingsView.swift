@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct SettingsView: View {
 
@@ -18,6 +21,12 @@ struct SettingsView: View {
 
     @State private var showClearDownloads = false
     @State private var showClearBookmarks = false
+
+    // State for test notification
+    @State private var isSendingTestNotification = false
+    @State private var testNotificationScheduled = false
+    @State private var testNotificationError: String? = nil
+    @State private var showNotificationErrorAlert = false
 
     @AppStorage("appTheme")
     private var appTheme = "System"
@@ -223,10 +232,40 @@ struct SettingsView: View {
                     } label: {
                         Label("Adhan Sound & Alerts", systemImage: "speaker.wave.3.fill")
                     }
+
+                    Button {
+                        triggerTestNotification()
+                    } label: {
+                        HStack {
+                            Label(
+                                isSendingTestNotification ? "Scheduling Test in 3s..." : "Send Test Notification (3s)",
+                                systemImage: isSendingTestNotification ? "hourglass" : "bell.and.waveform.fill"
+                            )
+                            .foregroundStyle(isSendingTestNotification ? Color.secondary : Color.green)
+
+                            Spacer()
+
+                            if testNotificationScheduled {
+                                Text("Scheduled!")
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.green.opacity(0.14), in: Capsule())
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                    }
+                    .disabled(isSendingTestNotification)
                 } header: {
                     SettingsIconLabel(title: "Prayer Notifications", icon: "bell.badge.fill", color: .red)
                 } footer: {
-                    PrayerNotifSummaryFooter()
+                    VStack(alignment: .leading, spacing: 4) {
+                        PrayerNotifSummaryFooter()
+                        if testNotificationScheduled {
+                            Text("Test alert will trigger in 3 seconds. Lock your phone or stay in the app to hear the Adhan.")
+                                .foregroundStyle(.green)
+                        }
+                    }
                 }
 
                 // MARK: - Prayer Calculation
@@ -405,7 +444,43 @@ struct SettingsView: View {
             .onDisappear {
                 translationNarrator.stop()
             }
+            .alert("Notification Permission", isPresented: $showNotificationErrorAlert) {
+                Button("Open iOS Settings") { openSystemSettings() }
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(testNotificationError ?? "Please enable notifications in iOS Settings.")
+            }
         }
+    }
+
+    private func triggerTestNotification() {
+        isSendingTestNotification = true
+        testNotificationScheduled = false
+        NotificationManager.shared.sendTestNotification(delay: 3) { success, errorMessage in
+            isSendingTestNotification = false
+            if success {
+                testNotificationScheduled = true
+                #if canImport(UIKit)
+                #if !targetEnvironment(simulator)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                #endif
+                #endif
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                    testNotificationScheduled = false
+                }
+            } else if let error = errorMessage {
+                testNotificationError = error
+                showNotificationErrorAlert = true
+            }
+        }
+    }
+
+    private func openSystemSettings() {
+        #if canImport(UIKit)
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+        #endif
     }
 
     private func refreshCounts() {

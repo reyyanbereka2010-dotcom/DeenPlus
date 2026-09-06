@@ -63,6 +63,84 @@ enum NotificationSoundOption: String, CaseIterable, Identifiable, Sendable {
 class NotificationManager {
     private let prayerIdentifiers: [String] = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
 
+    // MARK: - Test Notification
+
+    /// Schedules a test prayer notification to fire after a short delay (default 3 seconds).
+    /// This allows testing the chosen sound (Takbeer / Adhan / Chime), lock screen banner, and haptics.
+    func sendTestNotification(
+        delay: TimeInterval = 3,
+        completion: @escaping (Bool, String?) -> Void
+    ) {
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { [weak self] settings in
+            guard let self = self else { return }
+
+            switch settings.authorizationStatus {
+            case .authorized, .provisional:
+                self.scheduleTestRequest(delay: delay, completion: completion)
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                    if granted {
+                        self.scheduleTestRequest(delay: delay, completion: completion)
+                    } else {
+                        DispatchQueue.main.async {
+                            completion(false, "Notification permission was not granted.")
+                        }
+                    }
+                }
+            case .denied:
+                DispatchQueue.main.async {
+                    completion(false, "Notifications are disabled in iOS Settings. Please enable them to receive prayer alerts.")
+                }
+            @unknown default:
+                self.scheduleTestRequest(delay: delay, completion: completion)
+            }
+        }
+    }
+
+    private func scheduleTestRequest(delay: TimeInterval, completion: @escaping (Bool, String?) -> Void) {
+        let content = UNMutableNotificationContent()
+        content.title = "🕌 Prayer Alert Test"
+        content.body = "Allahu Akbar • Testing prayer reminder & adhan sound. Notifications are active!"
+
+        let defaults = UserDefaults.standard
+        let soundRaw = defaults.string(forKey: notificationSoundKey) ?? NotificationSoundOption.adhanTakbeer.rawValue
+        let soundOption = NotificationSoundOption(rawValue: soundRaw) ?? .adhanTakbeer
+
+        switch soundOption {
+        case .adhanTakbeer:
+            content.sound = UNNotificationSound(named: UNNotificationSoundName("adhan_takbeer.caf"))
+        case .adhanFull:
+            content.sound = UNNotificationSound(named: UNNotificationSoundName("adhan.caf"))
+        case .defaultChime:
+            content.sound = .default
+        case .silent:
+            content.sound = nil
+        }
+
+        content.categoryIdentifier = "prayerReminder"
+
+        // Cancel any previous test notification request first
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["TestPrayerNotification"])
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, delay), repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "TestPrayerNotification",
+            content: content,
+            trigger: trigger
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(false, error.localizedDescription)
+                } else {
+                    completion(true, nil)
+                }
+            }
+        }
+    }
+
     // MARK: - In-App Athan & Haptic Support
 
     /// UserDefaults key for enabling/disabling in-app athan haptic feedback.
