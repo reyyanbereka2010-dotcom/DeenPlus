@@ -99,6 +99,24 @@ final class QuranStorageManager {
 
 
 
+    func isBookmarked(surahId: Int, ayahNumber: Int) -> Bool {
+        loadBookmarks().contains { $0.surah == surahId && $0.ayah == ayahNumber }
+    }
+
+    func removeBookmark(surahId: Int, ayahNumber: Int) {
+        var bookmarks = loadBookmarks()
+        bookmarks.removeAll { $0.surah == surahId && $0.ayah == ayahNumber }
+        saveBookmarks(bookmarks)
+    }
+
+    func saveBookmark(_ verse: QuranVerse) {
+        var bookmarks = loadBookmarks()
+        if !bookmarks.contains(where: { $0.surah == verse.surah && $0.ayah == verse.ayah }) {
+            bookmarks.append(verse)
+            saveBookmarks(bookmarks)
+        }
+    }
+
     func deleteAllBookmarks() {
 
         try? FileManager.default.removeItem(

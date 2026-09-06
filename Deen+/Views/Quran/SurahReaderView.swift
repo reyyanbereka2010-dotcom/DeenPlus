@@ -49,17 +49,12 @@ struct SurahReaderView: View {
     /// Flag to indicate the initial scroll to resume position has completed
     @State private var hasFinishedInitialScroll = false
 
+    private var currentTheme: ReaderTheme {
+        ReaderTheme(rawValue: readingTheme) ?? .standard
+    }
+
     private var readerBackgroundColor: Color {
-        switch readingTheme {
-        case "sepia":
-            return colorScheme == .dark
-                ? Color(red: 0.16, green: 0.14, blue: 0.11)
-                : Color(red: 0.98, green: 0.96, blue: 0.91)
-        case "black":
-            return Color.black
-        default:
-            return Color(uiColor: .systemGroupedBackground)
-        }
+        currentTheme.backgroundColor(colorScheme: colorScheme)
     }
     
     init(
@@ -475,11 +470,16 @@ struct SurahReaderView: View {
                             }
 
                             HStack {
-                                Text("English Voice")
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Translation Voice")
+                                    Text("Authentic Muslim Voices")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
                                 Spacer()
                                 Picker("Translation Voice", selection: $translationNarrator.activeVoice) {
                                     ForEach(TranslationVoice.allCases) { voice in
-                                        Text(voice.shortName).tag(voice)
+                                        Text(voice.displayName).tag(voice)
                                     }
                                 }
                                 .pickerStyle(.menu)
@@ -498,12 +498,56 @@ struct SurahReaderView: View {
                         }
 
                         Section("Reading Theme") {
-                            Picker("Theme", selection: $readingTheme) {
-                                Text("Standard").tag("standard")
-                                Text("Warm Sepia").tag("sepia")
-                                Text("AMOLED Night").tag("black")
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                ForEach(ReaderTheme.allCases) { theme in
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            readingTheme = theme.rawValue
+                                        }
+                                    } label: {
+                                        VStack(spacing: 6) {
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .fill(theme.cardBackgroundColor(colorScheme: colorScheme))
+                                                    .frame(height: 52)
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 10)
+                                                            .stroke(readingTheme == theme.rawValue ? theme.accentColor(colorScheme: colorScheme) : theme.cardBorderColor(colorScheme: colorScheme), lineWidth: readingTheme == theme.rawValue ? 2.5 : 1)
+                                                    )
+
+                                                HStack(spacing: 4) {
+                                                    Image(systemName: theme.icon)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(theme.accentColor(colorScheme: colorScheme))
+                                                    Text("بِسْمِ اللَّهِ")
+                                                        .font(.caption2)
+                                                        .foregroundStyle(theme.primaryTextColor(colorScheme: colorScheme))
+                                                }
+
+                                                if readingTheme == theme.rawValue {
+                                                    VStack {
+                                                        HStack {
+                                                            Spacer()
+                                                            Image(systemName: "checkmark.circle.fill")
+                                                                .font(.system(size: 11))
+                                                                .foregroundStyle(theme.accentColor(colorScheme: colorScheme))
+                                                                .padding(4)
+                                                        }
+                                                        Spacer()
+                                                    }
+                                                }
+                                            }
+
+                                            Text(theme.shortName)
+                                                .font(.caption2.weight(readingTheme == theme.rawValue ? .bold : .medium))
+                                                .foregroundStyle(readingTheme == theme.rawValue ? Color.primary : Color.secondary)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("\(theme.displayName) theme")
+                                }
                             }
-                            .pickerStyle(.segmented)
+                            .padding(.vertical, 4)
                         }
 
                         Section("Font Sizing") {

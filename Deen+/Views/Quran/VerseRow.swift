@@ -21,6 +21,9 @@ struct VerseRow: View {
     let showTranslation: Bool
     let highlighted: Bool
 
+    @AppStorage("quranReadingTheme") private var readingTheme: String = "standard"
+    @Environment(\.colorScheme) private var colorScheme
+
     @ObservedObject private var recitationPlayer = RecitationPlayer.shared
     @ObservedObject private var translationNarrator = TranslationNarrator.shared
 
@@ -30,6 +33,10 @@ struct VerseRow: View {
     #if canImport(UIKit)
     @State private var showShareSheet = false
     #endif
+
+    private var currentTheme: ReaderTheme {
+        ReaderTheme(rawValue: readingTheme) ?? .standard
+    }
 
     private var isPlayingRecitation: Bool {
         recitationPlayer.isPlayingAyah(surahId: verse.surah, ayahNumber: verse.ayah)
@@ -64,39 +71,41 @@ struct VerseRow: View {
 
     private var cardBackgroundColor: Color {
         if isPlayingRecitation {
-            return Color.green.opacity(0.18)
+            return currentTheme.accentColor(colorScheme: colorScheme).opacity(0.20)
         } else if isSpeakingTranslation {
-            return Color.blue.opacity(0.15)
+            return Color.blue.opacity(0.18)
         } else if highlighted {
-            return Color.green.opacity(0.18)
+            return currentTheme.accentColor(colorScheme: colorScheme).opacity(0.22)
         } else {
-            return Color(.secondarySystemBackground)
+            return currentTheme.cardBackgroundColor(colorScheme: colorScheme)
         }
     }
 
     private var cardBorderColor: Color {
         if isPlayingRecitation {
-            return Color.green.opacity(0.7)
+            return currentTheme.accentColor(colorScheme: colorScheme).opacity(0.85)
         } else if isSpeakingTranslation {
-            return Color.blue.opacity(0.6)
+            return Color.blue.opacity(0.8)
         } else if highlighted {
-            return Color.green.opacity(0.4)
+            return currentTheme.accentColor(colorScheme: colorScheme).opacity(0.6)
         } else {
-            return Color.clear
+            return currentTheme.cardBorderColor(colorScheme: colorScheme)
         }
     }
 
     private var cardBorderWidth: CGFloat {
-        (isPlayingRecitation || isSpeakingTranslation) ? 2 : 1
+        (isPlayingRecitation || isSpeakingTranslation || highlighted) ? 2 : 1
     }
 
     private var cardShadowColor: Color {
         if isPlayingRecitation {
-            return Color.green.opacity(0.16)
+            return currentTheme.accentColor(colorScheme: colorScheme).opacity(0.25)
         } else if isSpeakingTranslation {
-            return Color.blue.opacity(0.14)
+            return Color.blue.opacity(0.20)
+        } else if readingTheme == "black" {
+            return Color.clear
         } else {
-            return Color.black.opacity(0.06)
+            return Color.black.opacity(0.05)
         }
     }
 
@@ -124,9 +133,9 @@ struct VerseRow: View {
         )
         .shadow(
             color: cardShadowColor,
-            radius: (isPlayingRecitation || isSpeakingTranslation) ? 12 : 8,
+            radius: (isPlayingRecitation || isSpeakingTranslation) ? 12 : 6,
             x: 0,
-            y: 4
+            y: 3
         )
         .padding(.horizontal, 12)
         .contentShape(Rectangle())
@@ -160,15 +169,15 @@ struct VerseRow: View {
                 HStack(spacing: 5) {
                     Image(systemName: "waveform")
                         .font(.caption2)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(currentTheme.accentColor(colorScheme: colorScheme))
                         .symbolEffect(.variableColor.iterative, options: .repeating)
                     Text(recitationPlayer.activeReciter.shortName)
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(currentTheme.accentColor(colorScheme: colorScheme))
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(Color.green.opacity(0.12), in: Capsule())
+                .background(currentTheme.accentColor(colorScheme: colorScheme).opacity(0.14), in: Capsule())
             } else if isSpeakingTranslation {
                 HStack(spacing: 5) {
                     Image(systemName: "waveform")
@@ -181,7 +190,7 @@ struct VerseRow: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(Color.blue.opacity(0.12), in: Capsule())
+                .background(Color.blue.opacity(0.14), in: Capsule())
             }
 
             Spacer()
@@ -189,23 +198,23 @@ struct VerseRow: View {
             if showCopiedAlert {
                 Text("Copied!")
                     .font(.caption2.bold())
-                    .foregroundStyle(.green)
+                    .foregroundStyle(currentTheme.accentColor(colorScheme: colorScheme))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
-                    .background(Color.green.opacity(0.14), in: Capsule())
+                    .background(currentTheme.accentColor(colorScheme: colorScheme).opacity(0.14), in: Capsule())
             }
 
             HStack(spacing: 4) {
                 Text("Ayah")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(currentTheme.secondaryTextColor(colorScheme: colorScheme))
                 Text(ayahNumber)
                     .font(.caption.bold())
-                    .foregroundStyle(.green)
+                    .foregroundStyle(currentTheme.accentColor(colorScheme: colorScheme))
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(Color.green.opacity(0.14), in: Capsule())
+            .background(currentTheme.accentColor(colorScheme: colorScheme).opacity(0.14), in: Capsule())
         }
         .padding(.horizontal, 4)
     }
@@ -216,6 +225,7 @@ struct VerseRow: View {
             .multilineTextAlignment(.trailing)
             .lineSpacing(18)
             .environment(\.layoutDirection, .rightToLeft)
+            .foregroundStyle(currentTheme.primaryTextColor(colorScheme: colorScheme))
             .padding(.horizontal)
             .frame(maxWidth: .infinity, alignment: .trailing)
             .textSelection(.enabled)
@@ -226,13 +236,13 @@ struct VerseRow: View {
     private var verseSeparator: some View {
         HStack(spacing: 6) {
             Capsule()
-                .fill(Color.green.opacity(0.4))
+                .fill(currentTheme.accentColor(colorScheme: colorScheme).opacity(0.4))
                 .frame(width: 24, height: 2)
             Circle()
-                .fill(Color.green.opacity(0.4))
+                .fill(currentTheme.accentColor(colorScheme: colorScheme).opacity(0.4))
                 .frame(width: 4, height: 4)
             Capsule()
-                .fill(Color.green.opacity(0.4))
+                .fill(currentTheme.accentColor(colorScheme: colorScheme).opacity(0.4))
                 .frame(width: 24, height: 2)
         }
         .padding(.top, 2)
@@ -244,7 +254,7 @@ struct VerseRow: View {
             .font(.system(size: translationSize))
             .lineSpacing(5)
             .multilineTextAlignment(.leading)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(currentTheme.secondaryTextColor(colorScheme: colorScheme))
             .padding(.horizontal)
             .frame(maxWidth: .infinity, alignment: .leading)
             .textSelection(.enabled)
@@ -258,7 +268,7 @@ struct VerseRow: View {
             } label: {
                 Image(systemName: isPlayingRecitation ? "pause.circle.fill" : "play.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(isPlayingRecitation ? Color.green : Color.primary)
+                    .foregroundStyle(isPlayingRecitation ? currentTheme.accentColor(colorScheme: colorScheme) : currentTheme.primaryTextColor(colorScheme: colorScheme))
                     .accessibilityLabel(recitationAccessibilityLabel)
             }
 
@@ -268,8 +278,8 @@ struct VerseRow: View {
                 } label: {
                     Image(systemName: isSpeakingTranslation ? "speaker.wave.3.circle.fill" : "speaker.wave.2.circle")
                         .font(.title2)
-                        .foregroundStyle(isSpeakingTranslation ? Color.blue : Color.secondary)
-                        .accessibilityLabel(isSpeakingTranslation ? "Stop English narration" : "Listen to translation by \(translationNarrator.activeVoice.shortName)")
+                        .foregroundStyle(isSpeakingTranslation ? Color.blue : currentTheme.secondaryTextColor(colorScheme: colorScheme))
+                        .accessibilityLabel(isSpeakingTranslation ? "Stop translation audio" : "Listen to translation by \(translationNarrator.activeVoice.shortName)")
                 }
             }
 
@@ -278,7 +288,7 @@ struct VerseRow: View {
             } label: {
                 Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                     .font(.title3)
-                    .foregroundStyle(isBookmarked ? Color.orange : Color.primary)
+                    .foregroundStyle(isBookmarked ? Color.orange : currentTheme.primaryTextColor(colorScheme: colorScheme))
                     .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Add bookmark")
             }
 
@@ -287,7 +297,7 @@ struct VerseRow: View {
             } label: {
                 Image(systemName: "doc.on.doc")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(currentTheme.secondaryTextColor(colorScheme: colorScheme))
                     .accessibilityLabel("Copy ayah and translation")
             }
 
@@ -296,7 +306,7 @@ struct VerseRow: View {
             } label: {
                 Image(systemName: "square.and.arrow.up")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(currentTheme.secondaryTextColor(colorScheme: colorScheme))
                     .accessibilityLabel("Share ayah")
             }
 
@@ -343,7 +353,7 @@ struct VerseRow: View {
                 speakTranslation()
             } label: {
                 Label(
-                    isSpeakingTranslation ? "Stop English Narration" : "Listen in English (\(translationNarrator.activeVoice.shortName))",
+                    isSpeakingTranslation ? "Stop Translation Audio" : "Listen Translation (\(translationNarrator.activeVoice.shortName))",
                     systemImage: isSpeakingTranslation ? "speaker.slash.fill" : "speaker.wave.2.fill"
                 )
             }
@@ -381,22 +391,48 @@ struct VerseRow: View {
         #endif
         #endif
 
-        if isPlayingRecitation {
+        if recitationPlayer.isPlaying {
             recitationPlayer.pause()
         }
 
-        let text = showTranslation ? verse.translation : ""
-        translationNarrator.togglePlay(surah: verse.surah, ayah: verse.ayah, text: text)
+        translationNarrator.togglePlay(surah: verse.surah, ayah: verse.ayah, text: verse.translation)
+    }
+
+    private func toggleBookmark() {
+        #if canImport(UIKit)
+        #if !targetEnvironment(simulator)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
+        #endif
+
+        let bookmarked = QuranStorageManager.shared.isBookmarked(
+            surahId: verse.surah,
+            ayahNumber: verse.ayah
+        )
+
+        if bookmarked {
+            QuranStorageManager.shared.removeBookmark(
+                surahId: verse.surah,
+                ayahNumber: verse.ayah
+            )
+            isBookmarked = false
+        } else {
+            QuranStorageManager.shared.saveBookmark(verse)
+            isBookmarked = true
+        }
+    }
+
+    private func checkBookmark() {
+        isBookmarked = QuranStorageManager.shared.isBookmarked(
+            surahId: verse.surah,
+            ayahNumber: verse.ayah
+        )
     }
 
     private func copyVerse() {
         #if canImport(UIKit)
         UIPasteboard.general.string = shareText
-        #if !targetEnvironment(simulator)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        #endif
-        #endif
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+        withAnimation {
             showCopiedAlert = true
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -404,24 +440,18 @@ struct VerseRow: View {
                 showCopiedAlert = false
             }
         }
+        #endif
     }
 
     private func copyArabic() {
         #if canImport(UIKit)
         UIPasteboard.general.string = verse.arabic
-        #if !targetEnvironment(simulator)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        #endif
         #endif
     }
 
     private func copyTranslation() {
-        guard showTranslation else { return }
         #if canImport(UIKit)
         UIPasteboard.general.string = verse.translation
-        #if !targetEnvironment(simulator)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        #endif
         #endif
     }
 
@@ -430,35 +460,15 @@ struct VerseRow: View {
         showShareSheet = true
         #endif
     }
-
-    private func checkBookmark() {
-        let saved = QuranStorageManager.shared.loadBookmarks()
-        isBookmarked = saved.contains { $0.id == verse.id }
-    }
-
-    private func toggleBookmark() {
-        var saved = QuranStorageManager.shared.loadBookmarks()
-        if isBookmarked {
-            saved.removeAll { $0.id == verse.id }
-        } else {
-            saved.append(verse)
-        }
-        QuranStorageManager.shared.saveBookmarks(saved)
-        isBookmarked.toggle()
-        #if canImport(UIKit)
-        #if !targetEnvironment(simulator)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        #endif
-        #endif
-    }
 }
 
 #if canImport(UIKit)
 struct ActivityView: UIViewControllerRepresentable {
     let activityItems: [Any]
+    let applicationActivities: [UIActivity]? = nil
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}

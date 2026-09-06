@@ -9,92 +9,102 @@ import Foundation
 import Combine
 import AVFoundation
 
-// MARK: - Available Translation Voices / Narrators
+// MARK: - Available Muslim Translation Voices / Narrators
 
 enum TranslationVoice: String, CaseIterable, Identifiable, Sendable {
     case ibrahimWalk = "ibrahim_walk"
-    case samantha = "samantha"
-    case daniel = "daniel"
-    case karen = "karen"
-    case oliver = "oliver"
-    case arthur = "arthur"
-    case system = "system"
+    case shamshadAliKhan = "shamshad_ali_khan"
+    case farhatHashmi = "farhat_hashmi"
+    case hedayatfar = "hedayatfar"
+    case besimKorkut = "besim_korkut"
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
         case .ibrahimWalk:
-            return "Ibrahim Walk (Sahih Int'l Studio Audio)"
-        case .samantha:
-            return "Samantha (American English, Female)"
-        case .daniel:
-            return "Daniel (British English, Male)"
-        case .karen:
-            return "Karen (Australian English, Female)"
-        case .oliver:
-            return "Oliver (British English, Male)"
-        case .arthur:
-            return "Arthur (British English, Male)"
-        case .system:
-            return "Default iOS System Voice"
+            return "Ibrahim Walk (Sahih Int'l • English)"
+        case .shamshadAliKhan:
+            return "Shamshad Ali Khan (Urdu)"
+        case .farhatHashmi:
+            return "Dr. Farhat Hashmi (Urdu)"
+        case .hedayatfar:
+            return "Hedayatfar (Persian • Farsi)"
+        case .besimKorkut:
+            return "Besim Korkut (Bosnian)"
         }
     }
 
     var shortName: String {
         switch self {
-        case .ibrahimWalk: return "Ibrahim Walk"
-        case .samantha: return "Samantha"
-        case .daniel: return "Daniel"
-        case .karen: return "Karen"
-        case .oliver: return "Oliver"
-        case .arthur: return "Arthur"
-        case .system: return "System Voice"
+        case .ibrahimWalk: return "Ibrahim Walk (EN)"
+        case .shamshadAliKhan: return "Shamshad Ali (UR)"
+        case .farhatHashmi: return "Dr. Farhat Hashmi (UR)"
+        case .hedayatfar: return "Hedayatfar (FA)"
+        case .besimKorkut: return "Besim Korkut (BS)"
+        }
+    }
+
+    var languageName: String {
+        switch self {
+        case .ibrahimWalk: return "English"
+        case .shamshadAliKhan: return "Urdu"
+        case .farhatHashmi: return "Urdu"
+        case .hedayatfar: return "Persian"
+        case .besimKorkut: return "Bosnian"
         }
     }
 
     var subtitle: String {
         switch self {
         case .ibrahimWalk:
-            return "Authentic studio voice recitation of Sahih International"
-        case .samantha:
-            return "Smooth American accent narration"
-        case .daniel:
-            return "Dignified British English narration"
-        case .karen:
-            return "Clear Australian English narration"
-        case .oliver:
-            return "Warm British English narration"
-        case .arthur:
-            return "Calm British English narration"
-        case .system:
-            return "Built-in device speech synthesis"
+            return "Authentic studio English recitation by Ibrahim Walk"
+        case .shamshadAliKhan:
+            return "Clear classical Urdu translation narration"
+        case .farhatHashmi:
+            return "Respected female Islamic scholar & educator"
+        case .hedayatfar:
+            return "Traditional Persian translation recitation"
+        case .besimKorkut:
+            return "Authoritative Bosnian translation narration"
         }
     }
 
     var isStudioRecording: Bool {
-        self == .ibrahimWalk
+        true
+    }
+
+    func audioUrl(surah: Int, ayah: Int) -> URL? {
+        let surahPad = String(format: "%03d", surah)
+        let ayahPad = String(format: "%03d", ayah)
+        let base: String
+        switch self {
+        case .ibrahimWalk:
+            base = "https://everyayah.com/data/English/Sahih_Intnl_Ibrahim_Walk_192kbps"
+        case .shamshadAliKhan:
+            base = "https://everyayah.com/data/translations/urdu_shamshad_ali_khan_46kbps"
+        case .farhatHashmi:
+            base = "https://everyayah.com/data/translations/urdu_farhat_hashmi"
+        case .hedayatfar:
+            base = "https://everyayah.com/data/translations/Fooladvand_Hedayatfar_40Kbps"
+        case .besimKorkut:
+            base = "https://everyayah.com/data/translations/besim_korkut_ajet_po_ajet"
+        }
+        return URL(string: "\(base)/\(surahPad)\(ayahPad).mp3")
     }
 }
 
 // MARK: - Translation Narrator Engine
 
 @MainActor
-final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+final class TranslationNarrator: NSObject, ObservableObject {
     static let shared = TranslationNarrator()
 
     private let voiceKey = "selectedTranslationVoice"
-    private let rateKey = "selectedTranslationRate"
 
     @Published var activeVoice: TranslationVoice = .ibrahimWalk {
         didSet {
             UserDefaults.standard.set(activeVoice.rawValue, forKey: voiceKey)
-        }
-    }
-
-    @Published var speechRate: Float = AVSpeechUtteranceDefaultSpeechRate {
-        didSet {
-            UserDefaults.standard.set(speechRate, forKey: rateKey)
         }
     }
 
@@ -105,7 +115,6 @@ final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizer
     @Published var isPreviewing: Bool = false
 
     private var player: AVPlayer?
-    private var speechSynthesizer = AVSpeechSynthesizer()
     private var playerDidFinishObserver: Any?
 
     override private init() {
@@ -117,13 +126,6 @@ final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizer
         } else {
             self.activeVoice = .ibrahimWalk
         }
-
-        let savedRate = UserDefaults.standard.float(forKey: rateKey)
-        if savedRate > 0 {
-            self.speechRate = savedRate
-        }
-
-        speechSynthesizer.delegate = self
     }
 
     // MARK: - Public Methods
@@ -132,7 +134,7 @@ final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizer
         isPlaying && currentSurahId == surah && currentAyahNumber == ayah
     }
 
-    func togglePlay(surah: Int, ayah: Int, text: String) {
+    func togglePlay(surah: Int, ayah: Int, text: String = "") {
         if isSpeaking(surah: surah, ayah: ayah) {
             stop()
         } else {
@@ -140,11 +142,15 @@ final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizer
         }
     }
 
-    func speak(surah: Int, ayah: Int, text: String) {
+    func speak(surah: Int, ayah: Int, text: String = "") {
         stop()
 
-        // Pause Arabic recitation if playing to prevent collision
+        // Pause Arabic recitation if playing to prevent audio conflict
         RecitationPlayer.shared.pause()
+
+        guard let url = activeVoice.audioUrl(surah: surah, ayah: ayah) else {
+            return
+        }
 
         currentSurahId = surah
         currentAyahNumber = ayah
@@ -153,12 +159,7 @@ final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizer
         isPreviewing = false
 
         configureAudioSession()
-
-        if activeVoice == .ibrahimWalk {
-            playIbrahimWalk(surah: surah, ayah: ayah)
-        } else {
-            speakWithTTS(text: text, voice: activeVoice)
-        }
+        playAudio(from: url)
     }
 
     func preview(voice: TranslationVoice) {
@@ -167,16 +168,13 @@ final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizer
         isPreviewing = true
         isPlaying = true
 
-        let sampleText = "In the name of Allah, the Entirely Merciful, the Especially Merciful."
+        guard let sampleUrl = voice.audioUrl(surah: 1, ayah: 1) else {
+            stop()
+            return
+        }
 
         configureAudioSession()
-
-        if voice == .ibrahimWalk {
-            // Play Al-Fatihah Ayah 1 as studio sample
-            playIbrahimWalk(surah: 1, ayah: 1)
-        } else {
-            speakWithTTS(text: sampleText, voice: voice)
-        }
+        playAudio(from: sampleUrl)
     }
 
     func stop() {
@@ -187,10 +185,6 @@ final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizer
 
         player?.pause()
         player = nil
-
-        if speechSynthesizer.isSpeaking {
-            speechSynthesizer.stopSpeaking(at: .immediate)
-        }
 
         isPlaying = false
         currentAyahKey = nil
@@ -217,16 +211,7 @@ final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizer
         #endif
     }
 
-    private func playIbrahimWalk(surah: Int, ayah: Int) {
-        let surahPad = String(format: "%03d", surah)
-        let ayahPad = String(format: "%03d", ayah)
-        let urlString = "https://everyayah.com/data/English/Sahih_Intnl_Ibrahim_Walk_192kbps/\(surahPad)\(ayahPad).mp3"
-
-        guard let url = URL(string: urlString) else {
-            stop()
-            return
-        }
-
+    private func playAudio(from url: URL) {
         let playerItem = AVPlayerItem(url: url)
         player = AVPlayer(playerItem: playerItem)
 
@@ -239,74 +224,5 @@ final class TranslationNarrator: NSObject, ObservableObject, AVSpeechSynthesizer
         }
 
         player?.play()
-    }
-
-    private func speakWithTTS(text: String, voice: TranslationVoice) {
-        guard !text.isEmpty else {
-            stop()
-            return
-        }
-
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.rate = speechRate
-
-        if let selectedVoice = resolveVoice(for: voice) {
-            utterance.voice = selectedVoice
-        }
-
-        speechSynthesizer.speak(utterance)
-    }
-
-    private func resolveVoice(for voice: TranslationVoice) -> AVSpeechSynthesisVoice? {
-        let allVoices = AVSpeechSynthesisVoice.speechVoices()
-
-        switch voice {
-        case .samantha:
-            if let matched = allVoices.first(where: { $0.language.starts(with: "en-US") && $0.name.localizedCaseInsensitiveContains("Samantha") }) {
-                return matched
-            }
-            return AVSpeechSynthesisVoice(language: "en-US")
-
-        case .daniel:
-            if let matched = allVoices.first(where: { $0.language.starts(with: "en-GB") && $0.name.localizedCaseInsensitiveContains("Daniel") }) {
-                return matched
-            }
-            return AVSpeechSynthesisVoice(language: "en-GB")
-
-        case .karen:
-            if let matched = allVoices.first(where: { $0.language.starts(with: "en-AU") && $0.name.localizedCaseInsensitiveContains("Karen") }) {
-                return matched
-            }
-            return AVSpeechSynthesisVoice(language: "en-AU")
-
-        case .oliver:
-            if let matched = allVoices.first(where: { $0.language.starts(with: "en-GB") && $0.name.localizedCaseInsensitiveContains("Oliver") }) {
-                return matched
-            }
-            return AVSpeechSynthesisVoice(language: "en-GB")
-
-        case .arthur:
-            if let matched = allVoices.first(where: { $0.language.starts(with: "en-GB") && $0.name.localizedCaseInsensitiveContains("Arthur") }) {
-                return matched
-            }
-            return AVSpeechSynthesisVoice(language: "en-GB")
-
-        case .system, .ibrahimWalk:
-            return AVSpeechSynthesisVoice(language: Locale.current.language.languageCode?.identifier ?? "en") ?? AVSpeechSynthesisVoice(language: "en-US")
-        }
-    }
-
-    // MARK: - AVSpeechSynthesizerDelegate
-
-    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in
-            self.stop()
-        }
-    }
-
-    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        Task { @MainActor in
-            self.stop()
-        }
     }
 }

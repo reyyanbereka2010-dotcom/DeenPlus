@@ -9,6 +9,13 @@ struct SurahHeader: View {
     let surah: Int
     let arabicName: String
 
+    @AppStorage("quranReadingTheme") private var readingTheme: String = "standard"
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var currentTheme: ReaderTheme {
+        ReaderTheme(rawValue: readingTheme) ?? .standard
+    }
+
     var body: some View {
         let metadata = SurahMetadata.get(surah)
 
@@ -17,15 +24,16 @@ struct SurahHeader: View {
             VStack(spacing: 6) {
                 Text(arabicName)
                     .font(.custom("KFGQPC Uthmanic Script HAFS Regular", size: 38))
-                    .foregroundColor(.green)
+                    .foregroundStyle(currentTheme.accentColor(colorScheme: colorScheme))
 
                 Text(metadata.englishName)
                     .font(.title2)
                     .fontWeight(.bold)
-                
+                    .foregroundStyle(currentTheme.primaryTextColor(colorScheme: colorScheme))
+
                 Text(metadata.englishTranslation)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(currentTheme.secondaryTextColor(colorScheme: colorScheme))
 
                 HStack(spacing: 8) {
                     Text(metadata.revelationPlace)
@@ -33,12 +41,12 @@ struct SurahHeader: View {
                         .fontWeight(.medium)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.green.opacity(0.12), in: Capsule())
-                        .foregroundColor(.green)
+                        .background(currentTheme.accentColor(colorScheme: colorScheme).opacity(0.14), in: Capsule())
+                        .foregroundStyle(currentTheme.accentColor(colorScheme: colorScheme))
 
                     Text("\(metadata.totalAyahs) Ayahs")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(currentTheme.secondaryTextColor(colorScheme: colorScheme))
                 }
                 .padding(.top, 2)
             }
@@ -47,19 +55,24 @@ struct SurahHeader: View {
             // Bismillah (for all surahs except Surah 9 At-Tawbah)
             if surah != 9 {
                 Divider()
+                    .overlay(currentTheme.cardBorderColor(colorScheme: colorScheme))
                     .padding(.horizontal, 40)
                     .padding(.vertical, 4)
 
                 Text("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ")
                     .font(.custom("KFGQPC Uthmanic Script HAFS Regular", size: 24))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(currentTheme.primaryTextColor(colorScheme: colorScheme))
                     .multilineTextAlignment(.center)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .padding(.horizontal, 16)
-        .background(Color(.secondarySystemBackground).opacity(0.7))
-        .cornerRadius(16)
+        .background(currentTheme.cardBackgroundColor(colorScheme: colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(currentTheme.cardBorderColor(colorScheme: colorScheme), lineWidth: 1)
+        )
     }
 }

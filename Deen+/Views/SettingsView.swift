@@ -178,9 +178,9 @@ struct SettingsView: View {
 
                     // Reading Theme
                     Picker("Reader Theme", selection: $quranReadingTheme) {
-                        Text("Standard").tag("standard")
-                        Text("Warm Sepia").tag("sepia")
-                        Text("AMOLED Night").tag("black")
+                        ForEach(ReaderTheme.allCases) { theme in
+                            Label(theme.displayName, systemImage: theme.icon).tag(theme.rawValue)
+                        }
                     }
 
                     Toggle("Show English Translation", isOn: $quranShowTranslation)
@@ -212,7 +212,7 @@ struct SettingsView: View {
                 } header: {
                     SettingsIconLabel(title: "Holy Quran & Recitation", icon: "book.fill", color: .green)
                 } footer: {
-                    Text("Includes studio recordings by Sheikhs and authentic Sahih International translation narration by Ibrahim Walk.")
+                    Text("Includes studio recordings by world-renowned Sheikhs and authentic Muslim translation audio including Ibrahim Walk.")
                 }
 
                 // MARK: - Prayer Notifications
