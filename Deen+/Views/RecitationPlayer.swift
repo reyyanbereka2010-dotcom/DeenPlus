@@ -115,8 +115,10 @@ final class RecitationPlayer: ObservableObject {
     @Published private(set) var isPlaying: Bool = false
     @Published private(set) var currentSurahId: Int?
     @Published private(set) var currentAyahNumber: Int?
+    @Published private(set) var isContinuousPlayback: Bool = false
     @Published var activeReciter: Reciter = .alafasy
 
+    private(set) var totalAyahsForCurrentSurah: Int = 0
     private var player: AVPlayer?
     private var endObserver: Any?
     private var errorObserver: Any?
@@ -155,12 +157,8 @@ final class RecitationPlayer: ObservableObject {
         guard reciter != activeReciter else { return }
         activeReciter = reciter
         UserDefaults.standard.set(reciter.rawValue, forKey: reciterStorageKey)
-        if isPlaying {
-            if let ayah = currentAyahNumber, let surah = currentSurahId {
-                playAyah(surahId: surah, ayahNumber: ayah, reciter: reciter)
-            } else if let surah = currentSurahId {
-                playSurah(surahId: surah, reciter: reciter)
-            }
+        if isPlaying, let surah = currentSurahId, let ayah = currentAyahNumber {
+            playAyahInternal(surahId: surah, ayahNumber: ayah, continuous: isContinuousPlayback, reciter: reciter)
         }
     }
 
@@ -169,51 +167,71 @@ final class RecitationPlayer: ObservableObject {
     }
 
     func isPlayingSurah(surahId: Int) -> Bool {
-        isPlaying && currentSurahId == surahId && currentAyahNumber == nil
+        isPlaying && currentSurahId == surahId && isContinuousPlayback
     }
 
     func togglePlayAyah(surahId: Int, ayahNumber: Int, reciter: Reciter? = nil) {
         if isPlayingAyah(surahId: surahId, ayahNumber: ayahNumber) {
             pause()
+        } else if !isPlaying && currentSurahId == surahId && currentAyahNumber == ayahNumber, let player = player {
+            player.play()
+            isPlaying = true
         } else {
             playAyah(surahId: surahId, ayahNumber: ayahNumber, reciter: reciter)
         }
     }
 
     func playAyah(surahId: Int, ayahNumber: Int, reciter: Reciter? = nil) {
+        isContinuousPlayback = false
+        playAyahInternal(surahId: surahId, ayahNumber: ayahNumber, continuous: false, reciter: reciter)
+    }
+
+    func togglePlay(for surahId: Int, startAyah: Int = 1, totalAyahs: Int? = nil, reciter: Reciter? = nil) {
         let chosen = reciter ?? activeReciter
-        guard let url = RecitationProvider.ayahURL(surahId: surahId, ayahNumber: ayahNumber, reciter: chosen) else { return }
+        if isPlaying && currentSurahId == surahId && isContinuousPlayback {
+            pause()
+        } else if !isPlaying && currentSurahId == surahId && isContinuousPlayback, let player = player {
+            player.play()
+            isPlaying = true
+        } else {
+            playSurah(surahId: surahId, startAyah: startAyah, totalAyahs: totalAyahs, reciter: chosen)
+        }
+    }
+
+    func playSurah(surahId: Int, startAyah: Int = 1, totalAyahs: Int? = nil, reciter: Reciter? = nil) {
+        let chosen = reciter ?? activeReciter
+        let total = totalAyahs ?? SurahMetadata.get(surahId).totalAyahs
+        totalAyahsForCurrentSurah = total > 0 ? total : 286
+        isContinuousPlayback = true
+        playAyahInternal(surahId: surahId, ayahNumber: startAyah, continuous: true, reciter: chosen)
+    }
+
+    func nextAyah() {
+        guard let surah = currentSurahId, let current = currentAyahNumber else { return }
+        if current < totalAyahsForCurrentSurah {
+            playAyahInternal(surahId: surah, ayahNumber: current + 1, continuous: isContinuousPlayback, reciter: activeReciter)
+        }
+    }
+
+    func previousAyah() {
+        guard let surah = currentSurahId, let current = currentAyahNumber else { return }
+        if current > 1 {
+            playAyahInternal(surahId: surah, ayahNumber: current - 1, continuous: isContinuousPlayback, reciter: activeReciter)
+        }
+    }
+
+    private func playAyahInternal(surahId: Int, ayahNumber: Int, continuous: Bool, reciter: Reciter? = nil) {
+        let chosen = reciter ?? activeReciter
+        guard let url = RecitationProvider.ayahURL(surahId: surahId, ayahNumber: ayahNumber, reciter: chosen) else {
+            stop()
+            return
+        }
         prepareSession()
         cleanupObservers()
 
         currentSurahId = surahId
         currentAyahNumber = ayahNumber
-        activeReciter = chosen
-
-        let item = AVPlayerItem(url: url)
-        player = AVPlayer(playerItem: item)
-        player?.play()
-        isPlaying = true
-        observeEnd()
-    }
-
-    func togglePlay(for surahId: Int, reciter: Reciter? = nil) {
-        let chosen = reciter ?? activeReciter
-        if isPlayingSurah(surahId: surahId) {
-            pause()
-        } else {
-            playSurah(surahId: surahId, reciter: chosen)
-        }
-    }
-
-    func playSurah(surahId: Int, reciter: Reciter? = nil) {
-        let chosen = reciter ?? activeReciter
-        guard let url = RecitationProvider.surahURL(surahId: surahId, reciter: chosen) else { return }
-        prepareSession()
-        cleanupObservers()
-
-        currentSurahId = surahId
-        currentAyahNumber = nil
+        isContinuousPlayback = continuous
         activeReciter = chosen
 
         let item = AVPlayerItem(url: url)
@@ -228,10 +246,16 @@ final class RecitationPlayer: ObservableObject {
         isPlaying = false
     }
 
+    func resume() {
+        player?.play()
+        isPlaying = true
+    }
+
     func stop() {
         player?.pause()
         player = nil
         isPlaying = false
+        isContinuousPlayback = false
         currentAyahNumber = nil
         cleanupObservers()
     }
@@ -254,8 +278,17 @@ final class RecitationPlayer: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             guard let self = self else { return }
-            self.isPlaying = false
-            self.currentAyahNumber = nil
+            if self.isContinuousPlayback,
+               let surah = self.currentSurahId,
+               let currentAyah = self.currentAyahNumber,
+               currentAyah < self.totalAyahsForCurrentSurah {
+                let nextAyah = currentAyah + 1
+                self.playAyahInternal(surahId: surah, ayahNumber: nextAyah, continuous: true, reciter: self.activeReciter)
+            } else {
+                self.isPlaying = false
+                self.isContinuousPlayback = false
+                self.currentAyahNumber = nil
+            }
         }
         errorObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemFailedToPlayToEndTime,
@@ -264,6 +297,7 @@ final class RecitationPlayer: ObservableObject {
         ) { [weak self] _ in
             guard let self = self else { return }
             self.isPlaying = false
+            self.isContinuousPlayback = false
             self.currentAyahNumber = nil
         }
     }

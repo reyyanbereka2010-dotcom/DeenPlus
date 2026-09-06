@@ -56,77 +56,171 @@ struct SurahReaderView: View {
     
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Header scrolls inline with the verses so it doesn't block the screen
-                    SurahHeader(
-                        surah: surah,
-                        arabicName: arabicName ?? SurahNames.name(for: surah)
-                    )
-                    .padding(.top, 8)
-                    
-                    Group {
-                        if quranManager.isLoading {
-                            ProgressView("Loading Ayahs...")
-                                .padding(.top, 50)
-                                .accessibilityLabel("Loading ayahs")
-                        } else if quranManager.offlineError {
-                            VStack(spacing: 15) {
-                                Image(systemName: "wifi.slash")
-                                    .font(.largeTitle)
-                                
-                                Text("Surah Not Available Offline")
-                                    .font(.headline)
-                                
-                                Text("Download this surah first or connect to the internet.")
-                                    .multilineTextAlignment(.center)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.top, 60)
-                        } else {
-                            VStack(spacing: 16) {
-                                ForEach(quranManager.verses) { verse in
-                                    let ayah = parseAyahNumber(from: verse.verseKey)
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Header scrolls inline with the verses so it doesn't block the screen
+                        SurahHeader(
+                            surah: surah,
+                            arabicName: arabicName ?? SurahNames.name(for: surah)
+                        )
+                        .padding(.top, 8)
+                        
+                        Group {
+                            if quranManager.isLoading {
+                                ProgressView("Loading Ayahs...")
+                                    .padding(.top, 50)
+                                    .accessibilityLabel("Loading ayahs")
+                            } else if quranManager.offlineError {
+                                VStack(spacing: 15) {
+                                    Image(systemName: "wifi.slash")
+                                        .font(.largeTitle)
                                     
-                                    VerseRow(
-                                        verse: verse,
-                                        arabicSize: CGFloat(arabicFontSize),
-                                        showTranslation: showTranslation,
-                                        highlighted: highlightedAyahNumber == ayah
-                                    )
-                                    .id(ayah)
-                                    .background(
-                                        GeometryReader { geo in
-                                            Color.clear
-                                                .preference(
-                                                    key: AyahPositionKey.self,
-                                                    value: [
-                                                        ayah: geo.frame(in: .named("scroll")).minY
-                                                    ]
-                                                )
-                                        }
-                                    )
+                                    Text("Surah Not Available Offline")
+                                        .font(.headline)
+                                    
+                                    Text("Download this surah first or connect to the internet.")
+                                        .multilineTextAlignment(.center)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.top, 60)
+                            } else {
+                                VStack(spacing: 16) {
+                                    ForEach(quranManager.verses) { verse in
+                                        let ayah = parseAyahNumber(from: verse.verseKey)
+                                        
+                                        VerseRow(
+                                            verse: verse,
+                                            arabicSize: CGFloat(arabicFontSize),
+                                            showTranslation: showTranslation,
+                                            highlighted: highlightedAyahNumber == ayah
+                                        )
+                                        .id(ayah)
+                                        .background(
+                                            GeometryReader { geo in
+                                                Color.clear
+                                                    .preference(
+                                                        key: AyahPositionKey.self,
+                                                        value: [
+                                                            ayah: geo.frame(in: .named("scroll")).minY
+                                                        ]
+                                                    )
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
+                    .padding(.horizontal)
+                    .padding(.bottom, recitationPlayer.currentSurahId == surah && recitationPlayer.currentAyahNumber != nil ? 110 : 80)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 80)
-            }
-            .coordinateSpace(name: "scroll")
-            .onPreferenceChange(AyahPositionKey.self) { positions in
-                guard hasFinishedInitialScroll, !positions.isEmpty else {
-                    return
+                .coordinateSpace(name: "scroll")
+                .onPreferenceChange(AyahPositionKey.self) { positions in
+                    guard hasFinishedInitialScroll, !positions.isEmpty else {
+                        return
+                    }
+                    
+                    let closest = positions.min {
+                        abs($0.value) < abs($1.value)
+                    }
+                    
+                    if let ayah = closest?.key, ayah != currentAyah {
+                        currentAyah = ayah
+                        saveAyah(ayah)
+                    }
                 }
-                
-                let closest = positions.min {
-                    abs($0.value) < abs($1.value)
+                .onChange(of: recitationPlayer.currentAyahNumber) { newAyah in
+                    guard let newAyah = newAyah,
+                          recitationPlayer.isPlaying,
+                          recitationPlayer.currentSurahId == surah else { return }
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        proxy.scrollTo(newAyah, anchor: .center)
+                    }
                 }
-                
-                if let ayah = closest?.key, ayah != currentAyah {
-                    currentAyah = ayah
-                    saveAyah(ayah)
+
+                // Floating live recitation bar showing current Ayah being read by the Sheikh
+                if recitationPlayer.currentSurahId == surah, let activeAyah = recitationPlayer.currentAyahNumber {
+                    HStack(spacing: 14) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.4)) {
+                                proxy.scrollTo(activeAyah, anchor: .center)
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "waveform")
+                                    .symbolEffect(.variableColor.iterative, options: .repeating)
+                                    .foregroundStyle(.green)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    let totalCount = quranManager.verses.count > 0 ? quranManager.verses.count : SurahMetadata.get(surah).totalAyahs
+                                    Text("Ayah \(activeAyah) of \(totalCount)")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(.primary)
+                                    Text(recitationPlayer.activeReciter.displayName)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Current Ayah \(activeAyah), tap to center")
+
+                        Spacer()
+
+                        HStack(spacing: 12) {
+                            Button {
+                                recitationPlayer.previousAyah()
+                            } label: {
+                                Image(systemName: "backward.fill")
+                                    .font(.subheadline)
+                                    .foregroundStyle(activeAyah > 1 ? Color.primary : Color.secondary.opacity(0.3))
+                            }
+                            .disabled(activeAyah <= 1)
+                            .accessibilityLabel("Previous ayah")
+
+                            Button {
+                                if recitationPlayer.isPlaying {
+                                    recitationPlayer.pause()
+                                } else {
+                                    recitationPlayer.resume()
+                                }
+                            } label: {
+                                Image(systemName: recitationPlayer.isPlaying ? "pause.fill" : "play.fill")
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.green, in: Circle())
+                            }
+                            .accessibilityLabel(recitationPlayer.isPlaying ? "Pause recitation" : "Resume recitation")
+
+                            Button {
+                                recitationPlayer.nextAyah()
+                            } label: {
+                                Image(systemName: "forward.fill")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.primary)
+                            }
+                            .accessibilityLabel("Next ayah")
+
+                            Button {
+                                recitationPlayer.stop()
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.secondary)
+                            }
+                            .accessibilityLabel("Stop recitation")
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                    .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 4)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: recitationPlayer.currentAyahNumber)
                 }
             }
             .navigationTitle(surahName ?? SurahMetadata.get(surah).englishName)
@@ -135,9 +229,20 @@ struct SurahReaderView: View {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
-                            recitationPlayer.togglePlay(for: surah)
+                            recitationPlayer.togglePlay(for: surah, startAyah: 1, totalAyahs: quranManager.verses.count > 0 ? quranManager.verses.count : nil)
                         } label: {
-                            Label(recitationPlayer.isPlayingSurah(surahId: surah) ? "Pause Recitation" : "Play Full Surah", systemImage: recitationPlayer.isPlayingSurah(surahId: surah) ? "pause.fill" : "play.fill")
+                            Label(
+                                recitationPlayer.isPlayingSurah(surahId: surah) ? "Pause Recitation" : "Play Full Surah (from Beginning)",
+                                systemImage: recitationPlayer.isPlayingSurah(surahId: surah) ? "pause.fill" : "play.fill"
+                            )
+                        }
+
+                        if currentAyah > 1 {
+                            Button {
+                                recitationPlayer.playSurah(surahId: surah, startAyah: currentAyah, totalAyahs: quranManager.verses.count > 0 ? quranManager.verses.count : nil)
+                            } label: {
+                                Label("Play from Ayah \(currentAyah)", systemImage: "arrow.right.to.line")
+                            }
                         }
 
                         Section("Sheikh / Reciter") {
@@ -145,7 +250,7 @@ struct SurahReaderView: View {
                                 Button {
                                     recitationPlayer.setReciter(reciter)
                                     if !recitationPlayer.isPlaying {
-                                        recitationPlayer.playSurah(surahId: surah, reciter: reciter)
+                                        recitationPlayer.playSurah(surahId: surah, startAyah: currentAyah > 1 ? currentAyah : 1, totalAyahs: quranManager.verses.count > 0 ? quranManager.verses.count : nil, reciter: reciter)
                                     }
                                 } label: {
                                     HStack {
@@ -161,7 +266,7 @@ struct SurahReaderView: View {
                         Image(systemName: recitationPlayer.isPlayingSurah(surahId: surah) ? "pause.circle.fill" : "play.circle")
                             .foregroundStyle(recitationPlayer.isPlayingSurah(surahId: surah) ? .green : .primary)
                     } primaryAction: {
-                        recitationPlayer.togglePlay(for: surah)
+                        recitationPlayer.togglePlay(for: surah, startAyah: currentAyah > 1 ? currentAyah : 1, totalAyahs: quranManager.verses.count > 0 ? quranManager.verses.count : nil)
                     }
                     .accessibilityLabel(recitationPlayer.isPlayingSurah(surahId: surah) ? "Pause recitation" : "Play recitation (\(recitationPlayer.activeReciter.shortName))")
 

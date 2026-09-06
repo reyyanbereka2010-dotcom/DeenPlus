@@ -74,6 +74,7 @@ struct VerseRow: View {
                         Image(systemName: "waveform")
                             .font(.caption2)
                             .foregroundStyle(.green)
+                            .symbolEffect(.variableColor.iterative, options: .repeating)
                         Text(recitationPlayer.activeReciter.shortName)
                             .font(.caption2)
                             .fontWeight(.semibold)
@@ -83,6 +84,7 @@ struct VerseRow: View {
                     .padding(.vertical, 3)
                     .background(Color.green.opacity(0.12))
                     .clipShape(Capsule())
+                    .transition(.opacity.combined(with: .scale))
                 }
 
                 Spacer()
@@ -187,15 +189,25 @@ struct VerseRow: View {
             )
             .fill(
                 isPlayingRecitation
-                ? Color.green.opacity(0.16)
+                ? Color.green.opacity(0.18)
                 : (highlighted ? Color.green.opacity(0.18) : Color(.secondarySystemBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 22)
-                    .stroke(isPlayingRecitation ? Color.green.opacity(0.6) : Color.clear, lineWidth: 1.5)
+                    .stroke(
+                        isPlayingRecitation
+                        ? Color.green.opacity(0.7)
+                        : (highlighted ? Color.green.opacity(0.4) : Color.clear),
+                        lineWidth: isPlayingRecitation ? 2 : 1
+                    )
             )
         )
-        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
+        .shadow(
+            color: isPlayingRecitation ? Color.green.opacity(0.16) : Color.black.opacity(0.06),
+            radius: isPlayingRecitation ? 12 : 8,
+            x: 0,
+            y: 4
+        )
         .accessibilityAddTraits(highlighted || isPlayingRecitation ? .isSelected : [])
         .padding(.horizontal, 12)
         .contentShape(Rectangle())
@@ -259,7 +271,7 @@ struct VerseRow: View {
             .tint(.orange)
         }
         .animation(
-            .easeInOut,
+            .easeInOut(duration: 0.3),
             value: highlighted || isPlayingRecitation
         )
         .onAppear {
