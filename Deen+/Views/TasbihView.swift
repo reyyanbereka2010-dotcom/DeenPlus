@@ -26,6 +26,7 @@ struct TasbihView: View {
     @State private var currentCount: Int = 0
     @State private var targetCount: Int = 33
     @State private var selectedPresetIndex: Int = 0
+    @State private var showResetConfirmation: Bool = false
     
     private let presets: [DhikrPreset] = [
         DhikrPreset(
@@ -241,15 +242,27 @@ struct TasbihView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        triggerResetHaptic()
-                        totalCount = 0
-                        currentCount = 0
+                        showResetConfirmation = true
                     } label: {
                         Image(systemName: "trash")
                             .foregroundStyle(.secondary)
                     }
                     .accessibilityLabel("Reset total stats")
                 }
+            }
+            .confirmationDialog(
+                "Reset All Tasbih Counts?",
+                isPresented: $showResetConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Reset All Counters", role: .destructive) {
+                    triggerResetHaptic()
+                    totalCount = 0
+                    currentCount = 0
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("This will reset your current session and your lifetime Dhikr count back to zero.")
             }
         }
     }

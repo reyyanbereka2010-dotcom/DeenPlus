@@ -48,6 +48,22 @@ struct BookmarksView: View {
             }
             .onDelete(perform: deleteBookmark)
         }
+        .overlay {
+            if bookmarks.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "bookmark")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                    Text("No Bookmarks Yet")
+                        .font(.headline)
+                    Text("Bookmark any Ayah while reading the Quran to easily find it here.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                }
+            }
+        }
         .navigationTitle("Bookmarks")
         .safeAreaPadding(.bottom, 60)
         .onAppear {

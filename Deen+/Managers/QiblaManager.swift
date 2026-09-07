@@ -28,13 +28,21 @@ class QiblaManager: NSObject, ObservableObject {
 
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
-
-        if CLLocationManager.headingAvailable() {
-            locationManager.startUpdatingHeading()
-        }
         
         // Default calculation
         calculateQibla(latitude: 21.4225, longitude: 39.8262)
+    }
+
+    /// Starts updating heading (call when QiblaView appears to conserve battery)
+    func startUpdatingHeading() {
+        if CLLocationManager.headingAvailable() {
+            locationManager.startUpdatingHeading()
+        }
+    }
+
+    /// Stops updating heading (call when QiblaView disappears to conserve battery)
+    func stopUpdatingHeading() {
+        locationManager.stopUpdatingHeading()
     }
     
     private func updateDisplayedRotation() {

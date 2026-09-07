@@ -115,8 +115,6 @@ struct NotificationSettingsView: View {
             .disabled(isSendingTest)
         } header: {
             Text("Test Notifications")
-        } footer: {
-            Text("Triggers a test alert in 3 seconds using your selected sound. You can lock your phone or stay in the app to test banner and Adhan audio.")
         }
     }
 
@@ -124,19 +122,14 @@ struct NotificationSettingsView: View {
         Section {
             ForEach(NotificationSoundOption.allCases) { option in
                 HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text(option.displayName)
-                                .font(.body)
-                                .fontWeight(notificationSoundOption == option.rawValue ? .semibold : .regular)
-                            if notificationSoundOption == option.rawValue {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
-                            }
+                    HStack(spacing: 6) {
+                        Text(option.displayName)
+                            .font(.body)
+                            .fontWeight(notificationSoundOption == option.rawValue ? .semibold : .regular)
+                        if notificationSoundOption == option.rawValue {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
                         }
-                        Text(option.subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -161,8 +154,6 @@ struct NotificationSettingsView: View {
             }
         } header: {
             Text("Notification Sound")
-        } footer: {
-            Text("Takbeer Alert provides the opening Adhan under 30s compliant with iOS lock-screen requirements. Full Adhan plays the complete 3-minute recording.")
         }
     }
 
@@ -175,8 +166,6 @@ struct NotificationSettingsView: View {
             Toggle("Isha", isOn: $ishaEnabled)
         } header: {
             Text("Prayers")
-        } footer: {
-            Text(masterEnabled ? "Select which prayers you want notifications for." : "Enable notifications to configure per-prayer alerts.")
         }
         .disabled(!masterEnabled)
         .onChange(of: fajrEnabled) { _ in updateNotifications() }
@@ -189,8 +178,6 @@ struct NotificationSettingsView: View {
     private var athanHapticSection: some View {
         Section {
             Toggle("Athan Vibration/Haptic (in-app)", isOn: $athaanHapticEnabled)
-        } footer: {
-            Text("Plays enhanced vibration/haptic feedback when a prayer notification fires with the app open.")
         }
     }
 
@@ -299,5 +286,12 @@ struct NotificationSettingsView: View {
         case .denied: return "xmark.circle.fill"
         default: return "questionmark.circle.fill"
         }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        NotificationSettingsView()
+            .environmentObject(PrayerManager())
     }
 }

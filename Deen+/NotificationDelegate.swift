@@ -25,8 +25,8 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         if prayerIdentifiers.contains(identifier) || identifier == "TestPrayerNotification" {
             // Play athan sound/haptic in-app
             NotificationManager.shared.handleForegroundAthan(for: identifier == "TestPrayerNotification" ? "Fajr" : identifier)
-            // Show the notification as a banner with sound
-            completionHandler([.sound, .banner])
+            // Show notification as banner; audio is handled in-app by handleForegroundAthan to prevent echo
+            completionHandler([.banner])
         } else {
             completionHandler([.banner, .sound])
         }

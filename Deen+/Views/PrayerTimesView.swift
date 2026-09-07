@@ -14,6 +14,27 @@ struct PrayerTimesView: View {
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private let hijriManager = HijriCalendarManager.shared
 
+    static let prayerFormatter24: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    static let prayerFormatterSingleHour: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "H:mm"
+        return f
+    }()
+
+    static let prayerDisplayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+
     private struct PrayerItem {
         let name: String
         let time: String
@@ -38,45 +59,41 @@ struct PrayerTimesView: View {
 
         // 1. Check if any salah is currently active (within 20 mins after start time)
         var currentSalahName: String? = nil
-        for prayer in salahOnly {
-            if let prayerDate = parsePrayerDate(from: prayer.time, baseDate: currentTime) {
+        for p in salahOnly {
+            if let prayerDate = parsePrayerDate(from: p.time, baseDate: currentTime) {
                 let elapsed = currentTime.timeIntervalSince(prayerDate)
                 if elapsed >= 0 && elapsed <= 1200 {
-                    currentSalahName = prayer.name
+                    currentSalahName = p.name
                     break
                 }
             }
         }
 
-        // 2. Find next upcoming prayer today
+        // 2. Find the next upcoming salah today
         var nextSalahName: String? = nil
-        var nextRemainingString: String? = nil
-
-        for prayer in salahOnly {
-            if let prayerDate = parsePrayerDate(from: prayer.time, baseDate: currentTime), prayerDate > currentTime {
-                nextSalahName = prayer.name
-                let diff = max(0, Int(prayerDate.timeIntervalSince(currentTime)))
-                nextRemainingString = formatRemaining(diff)
+        var nextSalahDiff: Int? = nil
+        for p in salahOnly {
+            if let prayerDate = parsePrayerDate(from: p.time, baseDate: currentTime), prayerDate > currentTime {
+                nextSalahName = p.name
+                nextSalahDiff = Int(prayerDate.timeIntervalSince(currentTime))
                 break
             }
         }
 
-        // 3. If all prayers have passed today, tomorrow's Fajr is next
-        if nextSalahName == nil {
+        // 3. If all salah have passed today, Fajr tomorrow is next
+        if nextSalahName == nil, let fajr = salahOnly.first {
             if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: currentTime),
-               let tomorrowFajr = parsePrayerDate(from: prayerManager.prayerTimes.fajr, baseDate: tomorrow) {
-                nextSalahName = "Fajr"
-                let diff = max(0, Int(tomorrowFajr.timeIntervalSince(currentTime)))
-                nextRemainingString = formatRemaining(diff)
-            } else {
-                nextSalahName = "Fajr"
+               let tomorrowFajr = parsePrayerDate(from: fajr.time, baseDate: tomorrow) {
+                nextSalahName = fajr.name
+                nextSalahDiff = max(0, Int(tomorrowFajr.timeIntervalSince(currentTime)))
             }
         }
 
         return rawPrayers.map { p in
             let isNext = (p.name == nextSalahName)
             let isCurrent = (p.name == currentSalahName)
-            let remaining = isNext ? nextRemainingString : nil
+            let remaining: String? = isNext ? formatRemaining(nextSalahDiff ?? 0) : nil
+
             return PrayerItem(
                 name: p.name,
                 time: p.time,
@@ -104,19 +121,9 @@ struct PrayerTimesView: View {
 
     private func parsePrayerDate(from timeString: String, baseDate: Date) -> Date? {
         let cleanTime = timeString.components(separatedBy: " ").first ?? timeString
+        guard let parsedDate = Self.prayerFormatter24.date(from: cleanTime) ?? Self.prayerFormatterSingleHour.date(from: cleanTime) else { return nil }
+
         let cal = Calendar.current
-
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-
-        var parsed = formatter.date(from: cleanTime)
-        if parsed == nil {
-            formatter.dateFormat = "H:mm"
-            parsed = formatter.date(from: cleanTime)
-        }
-        guard let parsedDate = parsed else { return nil }
-
         var components = cal.dateComponents([.hour, .minute], from: parsedDate)
         components.year = cal.component(.year, from: baseDate)
         components.month = cal.component(.month, from: baseDate)
@@ -311,19 +318,10 @@ struct PrayerRow: View {
     }
 
     func convertTime(_ time: String) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-
         let cleanTime = time.components(separatedBy: " ").first ?? time
-
-        guard let date = formatter.date(from: cleanTime) else {
-            return time
+        if let date = PrayerTimesView.prayerFormatter24.date(from: cleanTime) ?? PrayerTimesView.prayerFormatterSingleHour.date(from: cleanTime) {
+            return PrayerTimesView.prayerDisplayFormatter.string(from: date)
         }
-
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateFormat = "h:mm a"
-
-        return displayFormatter.string(from: date)
+        return time
     }
 }

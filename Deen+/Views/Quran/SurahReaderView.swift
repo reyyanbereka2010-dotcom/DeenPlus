@@ -97,7 +97,8 @@ struct SurahReaderView: View {
                             } else if quranManager.offlineError {
                                 VStack(spacing: 15) {
                                     Image(systemName: "wifi.slash")
-                                        .font(.largeTitle)
+                                        .font(.system(size: 44))
+                                        .foregroundStyle(.secondary)
                                     
                                     Text("Surah Not Available Offline")
                                         .font(.headline)
@@ -105,6 +106,24 @@ struct SurahReaderView: View {
                                     Text("Download this surah first or connect to the internet.")
                                         .multilineTextAlignment(.center)
                                         .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 32)
+
+                                    Button {
+                                        Task {
+                                            await quranManager.fetchVerses(
+                                                for: surah,
+                                                surahName: surahName ?? ""
+                                            )
+                                        }
+                                    } label: {
+                                        Label("Try Again", systemImage: "arrow.clockwise")
+                                            .fontWeight(.semibold)
+                                            .padding(.horizontal, 20)
+                                            .padding(.vertical, 10)
+                                            .background(Color.green, in: Capsule())
+                                            .foregroundStyle(.white)
+                                    }
+                                    .padding(.top, 4)
                                 }
                                 .padding(.top, 60)
                             } else {
@@ -235,6 +254,7 @@ struct SurahReaderView: View {
 
                 // Floating live recitation bar showing current Ayah being read by the Sheikh
                 if recitationPlayer.currentSurahId == surah, let activeAyah = recitationPlayer.currentAyahNumber {
+                    let totalCount = quranManager.verses.count > 0 ? quranManager.verses.count : SurahMetadata.get(surah).totalAyahs
                     HStack(spacing: 14) {
                         Button {
                             withAnimation(.easeInOut(duration: 0.4)) {
@@ -246,7 +266,6 @@ struct SurahReaderView: View {
                                     .symbolEffect(.variableColor.iterative, options: .repeating)
                                     .foregroundStyle(.green)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    let totalCount = quranManager.verses.count > 0 ? quranManager.verses.count : SurahMetadata.get(surah).totalAyahs
                                     Text("Ayah \(activeAyah) of \(totalCount)")
                                         .font(.caption.weight(.bold))
                                         .foregroundStyle(.primary)
@@ -330,8 +349,9 @@ struct SurahReaderView: View {
                             } label: {
                                 Image(systemName: "forward.fill")
                                     .font(.subheadline)
-                                    .foregroundStyle(Color.primary)
+                                    .foregroundStyle(activeAyah < totalCount ? Color.primary : Color.secondary.opacity(0.3))
                             }
+                            .disabled(activeAyah >= totalCount)
                             .accessibilityLabel("Next ayah")
 
                             Button {

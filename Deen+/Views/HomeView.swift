@@ -64,6 +64,28 @@ struct HomeView: View {
     
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private let hijriManager = HijriCalendarManager.shared
+
+    // MARK: - Cached Date Formatters
+    private static let prayerFormatter24: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    private static let prayerFormatterSingleHour: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "H:mm"
+        return f
+    }()
+
+    private static let prayerDisplayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "h:mm a"
+        return f
+    }()
     
     // Curated inspirational Ayat that rotate daily
     private let dailyVerses: [DailyAyah] = [
@@ -145,10 +167,7 @@ struct HomeView: View {
     
     private func parsePrayerDate(from timeStr: String, baseDate: Date) -> Date? {
         let cleanTime = timeStr.components(separatedBy: " ").first ?? timeStr
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-        guard let parsed = formatter.date(from: cleanTime) else { return nil }
+        guard let parsed = Self.prayerFormatter24.date(from: cleanTime) ?? Self.prayerFormatterSingleHour.date(from: cleanTime) else { return nil }
         
         let cal = Calendar.current
         var components = cal.dateComponents([.hour, .minute], from: parsed)
@@ -264,16 +283,9 @@ struct HomeView: View {
     }
     
     private func formatTimeString(_ time: String) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-        
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateFormat = "h:mm a"
-        
         let cleanTime = time.components(separatedBy: " ").first ?? time
-        if let date = formatter.date(from: cleanTime) {
-            return displayFormatter.string(from: date)
+        if let date = Self.prayerFormatter24.date(from: cleanTime) ?? Self.prayerFormatterSingleHour.date(from: cleanTime) {
+            return Self.prayerDisplayFormatter.string(from: date)
         }
         return time
     }
@@ -299,206 +311,181 @@ struct HomeView: View {
         case 4..<6:
             // Fajr: Mystical dawn twilight (deep purple into soft rose & orange)
             return [
-                Color(red: 0.12, green: 0.08, blue: 0.25),
-                Color(red: 0.35, green: 0.15, blue: 0.38),
-                Color(red: 0.85, green: 0.42, blue: 0.35)
+                Color(red: 0.12, green: 0.08, blue: 0.28),
+                Color(red: 0.35, green: 0.15, blue: 0.40),
+                Color(red: 0.70, green: 0.30, blue: 0.38),
+                Color(red: 0.92, green: 0.55, blue: 0.35)
             ]
-        case 6..<11:
-            // Morning: Fresh crisp daylight sky
+        case 6..<9:
+            // Sunrise / Early Morning: Bright optimistic golden dawn
             return [
-                Color(red: 0.18, green: 0.48, blue: 0.85),
-                Color(red: 0.40, green: 0.72, blue: 0.94),
-                Color(red: 0.65, green: 0.88, blue: 0.98)
+                Color(red: 0.15, green: 0.35, blue: 0.65),
+                Color(red: 0.35, green: 0.58, blue: 0.80),
+                Color(red: 0.85, green: 0.68, blue: 0.45),
+                Color(red: 0.98, green: 0.82, blue: 0.55)
             ]
-        case 11..<15:
-            // Dhuhr: Brilliant high-noon azure
+        case 9..<16:
+            // Dhuhr / Midday: Rich serene Islamic emerald-cyan day
             return [
-                Color(red: 0.08, green: 0.40, blue: 0.82),
-                Color(red: 0.22, green: 0.62, blue: 0.94),
-                Color(red: 0.50, green: 0.82, blue: 0.98)
+                Color(red: 0.05, green: 0.38, blue: 0.48),
+                Color(red: 0.08, green: 0.52, blue: 0.45),
+                Color(red: 0.12, green: 0.65, blue: 0.52),
+                Color(red: 0.20, green: 0.78, blue: 0.62)
             ]
-        case 15..<18:
-            // Asr: Warm golden amber afternoon
+        case 16..<18:
+            // Asr: Warm golden afternoon glow
             return [
-                Color(red: 0.14, green: 0.32, blue: 0.64),
-                Color(red: 0.58, green: 0.48, blue: 0.42),
-                Color(red: 0.90, green: 0.60, blue: 0.34)
+                Color(red: 0.18, green: 0.28, blue: 0.55),
+                Color(red: 0.38, green: 0.40, blue: 0.60),
+                Color(red: 0.78, green: 0.52, blue: 0.38),
+                Color(red: 0.95, green: 0.70, blue: 0.38)
             ]
         case 18..<20:
-            // Maghrib: Rich sunset crimson & violet
+            // Maghrib: Dramatic sunset red-orange into twilight indigo
             return [
-                Color(red: 0.18, green: 0.10, blue: 0.34),
-                Color(red: 0.64, green: 0.22, blue: 0.36),
-                Color(red: 0.95, green: 0.46, blue: 0.26)
+                Color(red: 0.10, green: 0.08, blue: 0.30),
+                Color(red: 0.42, green: 0.12, blue: 0.32),
+                Color(red: 0.82, green: 0.25, blue: 0.25),
+                Color(red: 0.95, green: 0.55, blue: 0.22)
             ]
         default:
-            // Isha & Night: Deep midnight celestial blue
+            // Isha / Night: Majestic deep cosmic midnight blue with moonlight cyan undertone
             return [
                 Color(red: 0.03, green: 0.05, blue: 0.15),
-                Color(red: 0.07, green: 0.10, blue: 0.26),
-                Color(red: 0.02, green: 0.03, blue: 0.09)
+                Color(red: 0.06, green: 0.10, blue: 0.24),
+                Color(red: 0.09, green: 0.18, blue: 0.35),
+                Color(red: 0.12, green: 0.25, blue: 0.42)
             ]
         }
     }
     
-    var currentDateFormatted: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMMM d, yyyy"
-        return formatter.string(from: currentTime)
-    }
-    
-    private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .light) {
-        #if canImport(UIKit)
-        let impact = UIImpactFeedbackGenerator(style: style)
-        impact.impactOccurred()
-        #endif
-    }
-    
-    // MARK: - Body
-    
     var body: some View {
         NavigationStack {
             ZStack {
-                // Smooth Dynamic Sky Gradient Background
+                // Living Dynamic Sky Gradient
                 LinearGradient(
                     colors: skyGradient,
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
+                .animation(.easeInOut(duration: 2.0), value: skyGradient)
                 
-                // Subtle Ambient Light Orbs
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.12))
-                        .frame(width: 260, height: 260)
-                        .blur(radius: 50)
-                        .offset(x: -120, y: -220)
-                        .scaleEffect(animateGlow ? 1.15 : 0.9)
-                    
-                    Circle()
-                        .fill(Color.white.opacity(0.08))
-                        .frame(width: 320, height: 320)
-                        .blur(radius: 60)
-                        .offset(x: 140, y: 180)
-                        .scaleEffect(animateGlow ? 0.9 : 1.12)
-                }
-                .animation(.easeInOut(duration: 6.0).repeatForever(autoreverses: true), value: animateGlow)
+                // Ambient Radial Glow in the Corner
+                RadialGradient(
+                    colors: [Color.white.opacity(0.18), Color.clear],
+                    center: .topTrailing,
+                    startRadius: 20,
+                    endRadius: 400
+                )
+                .ignoresSafeArea()
+                .blendMode(.overlay)
                 
-                // Main Content ScrollView
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
-                        // 1. Top Navigation & Greeting Header
+                        // Top Header: Greeting, Islamic Date, Live Clock
                         headerView
                         
-                        // 2. Islamic Special Event Banner (if applicable today)
-                        let hijri = hijriManager.getHijriDate()
-                        if let event = hijri.event {
+                        // Islamic Event Banner (if any today)
+                        if let event = hijriManager.getHijriDate(for: currentTime).event {
                             islamicEventBanner(event: event)
                         }
                         
-                        // 3. Hero Next Prayer Hub with Live Countdown & Timeline
+                        // Hero Next/Current Prayer Card
                         heroPrayerCard
                         
-                        // 4. Continue Quran Reading Card (if bookmark exists)
+                        // Continue Reading Quran Quick-Access (if available)
                         if let read = recentlyRead {
                             continueReadingCard(read: read)
                         }
                         
-                        // 5. Daily Ayah of the Day (Inspirational Card)
+                        // Daily Inspirational Ayah Card
                         dailyAyahCard
                         
-                        // 6. Modern 2x2 Bento Quick Actions
+                        // 2x2 Bento Quick Actions Grid
                         bentoGridSection
                         
-                        Spacer()
-                            .frame(height: 90)
+                        Spacer(minLength: 40)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                }
-                
-                // Floating Copied Notification Toast
-                if showCopiedBanner {
-                    VStack {
-                        HStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                            Text("Ayah copied to clipboard")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.white)
-                        }
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 10)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                        .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
-                        .padding(.top, 16)
-                        
-                        Spacer()
-                    }
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .zIndex(100)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 80)
                 }
             }
-        }
-        .onReceive(timer) { date in
-            currentTime = date
-        }
-        .onAppear {
-            animateGlow = true
-            locationManager.requestLocation()
-            prayerManager.fetchPrayerTimes(
-                latitude: locationManager.latitude,
-                longitude: locationManager.longitude
-            )
-            recentlyRead = RecentlyReadManager.shared.load()
-        }
-        .onChange(of: locationManager.latitude) { newLat in
-            prayerManager.fetchPrayerTimes(
-                latitude: newLat,
-                longitude: locationManager.longitude
-            )
+            .navigationTitle("")
+            .navigationBarHidden(true)
+            .onReceive(timer) { input in
+                currentTime = input
+            }
+            .onAppear {
+                recentlyRead = RecentlyReadManager.shared.load()
+                prayerManager.fetchPrayerTimes(
+                    latitude: locationManager.latitude,
+                    longitude: locationManager.longitude
+                )
+            }
+            .overlay(alignment: .top) {
+                if showCopiedBanner {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Ayah copied to clipboard")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
+                    .padding(.top, 50)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
         }
     }
     
     // MARK: - Header View
     
     private var headerView: some View {
-        let hijri = hijriManager.getHijriDate()
+        let hijri = hijriManager.getHijriDate(for: currentTime)
         let greeting = contextualGreeting
         
-        return VStack(spacing: 12) {
+        return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Assalamu Alaikum")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                    
                     Text(greeting.arabic)
-                        .font(.custom("KFGQPC Uthmanic Script HAFS Regular", size: 16))
+                        .font(.custom("KFGQPC Uthmanic Script HAFS Regular", size: 18))
                         .foregroundStyle(.white.opacity(0.85))
+                    
+                    Text(greeting.title)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                 }
                 
                 Spacer()
                 
-                // Settings Shortcut Button
-                Button {
-                    triggerHaptic()
-                    selectedTab = 6
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .frame(width: 42, height: 42)
-                        
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(.white)
-                    }
-                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
+                // Clock Pill
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(currentTime, style: .time)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    
+                    Text(currentTime, format: .dateTime.weekday(.wide))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white.opacity(0.8))
+                        .textCase(.uppercase)
                 }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.white.opacity(0.18))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
             }
             
             // Location Chip & Hijri Date Row
@@ -1009,6 +996,12 @@ struct HomeView: View {
                 }
             }
         }
+    }
+    
+    private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .light) {
+        #if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: style).impactOccurred()
+        #endif
     }
 }
 

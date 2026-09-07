@@ -283,6 +283,7 @@ struct QiblaView: View {
         }
         .onAppear {
             qiblaViewActive = true
+            qiblaManager.startUpdatingHeading()
             if locationManager.latitude != 0 {
                 qiblaManager.calculateQibla(
                     latitude: locationManager.latitude,
@@ -295,6 +296,7 @@ struct QiblaView: View {
         .onDisappear {
             qiblaViewActive = false
             hasVibrated = false
+            qiblaManager.stopUpdatingHeading()
             try? hapticsEngine?.stop()
             hapticsEngine = nil
         }

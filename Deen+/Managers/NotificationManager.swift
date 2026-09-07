@@ -100,8 +100,8 @@ class NotificationManager {
 
     private func scheduleTestRequest(delay: TimeInterval, completion: @escaping (Bool, String?) -> Void) {
         let content = UNMutableNotificationContent()
-        content.title = "test notif"
-        content.body = "test notif"
+        content.title = "Test Prayer Alert"
+        content.body = "Allahu Akbar — Notifications and audio are working properly."
 
         let defaults = UserDefaults.standard
         let soundRaw = defaults.string(forKey: notificationSoundKey) ?? NotificationSoundOption.adhanTakbeer.rawValue
@@ -290,12 +290,18 @@ class NotificationManager {
 
         let cleanTime = time.components(separatedBy: " ").first ?? time
 
-        guard let date = formatter.date(from: cleanTime) else { return }
+        var date = formatter.date(from: cleanTime)
+        if date == nil {
+            formatter.dateFormat = "H:mm"
+            date = formatter.date(from: cleanTime)
+        }
+
+        guard let validDate = date else { return }
 
         let calendar = Calendar.current
         let components = calendar.dateComponents(
             [.hour, .minute],
-            from: date
+            from: validDate
         )
 
         let content = UNMutableNotificationContent()

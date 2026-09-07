@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import Combine
+import MediaPlayer
 
 // MARK: - Reciter and URL provider
 
@@ -128,6 +129,7 @@ final class RecitationPlayer: ObservableObject {
     private var player: AVPlayer?
     private var endObserver: Any?
     private var errorObserver: Any?
+    private var interruptionObserver: Any?
     private let reciterStorageKey = "selectedQuranReciter"
 
     init() {
@@ -145,6 +147,9 @@ final class RecitationPlayer: ObservableObject {
         if repeats > 0 {
             self.repeatCount = repeats
         }
+
+        setupInterruptionObserver()
+        setupRemoteCommands()
     }
 
     deinit {
@@ -153,6 +158,9 @@ final class RecitationPlayer: ObservableObject {
         }
         if let errorObserver {
             NotificationCenter.default.removeObserver(errorObserver)
+        }
+        if let interruptionObserver {
+            NotificationCenter.default.removeObserver(interruptionObserver)
         }
     }
 
@@ -167,11 +175,134 @@ final class RecitationPlayer: ObservableObject {
         }
     }
 
+    // MARK: - Audio Session Interruption
+
+    private func setupInterruptionObserver() {
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: .main
+        ) { [weak self] notification in
+            guard let self = self,
+                  let userInfo = notification.userInfo,
+                  let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+            switch type {
+            case .began:
+                Task { @MainActor in
+                    self.pause()
+                }
+            case .ended:
+                if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
+                    let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                    if options.contains(.shouldResume) {
+                        Task { @MainActor in
+                            self.resume()
+                        }
+                    }
+                }
+            @unknown default:
+                break
+            }
+        }
+    }
+
+    // MARK: - Lock Screen & Control Center (MPRemoteCommandCenter)
+
+    private func setupRemoteCommands() {
+        let center = MPRemoteCommandCenter.shared()
+
+        center.playCommand.isEnabled = true
+        center.playCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            Task { @MainActor in
+                self.resume()
+            }
+            return .success
+        }
+
+        center.pauseCommand.isEnabled = true
+        center.pauseCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            Task { @MainActor in
+                self.pause()
+            }
+            return .success
+        }
+
+        center.togglePlayPauseCommand.isEnabled = true
+        center.togglePlayPauseCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            Task { @MainActor in
+                if self.isPlaying {
+                    self.pause()
+                } else {
+                    self.resume()
+                }
+            }
+            return .success
+        }
+
+        center.nextTrackCommand.isEnabled = true
+        center.nextTrackCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            Task { @MainActor in
+                self.nextAyah()
+            }
+            return .success
+        }
+
+        center.previousTrackCommand.isEnabled = true
+        center.previousTrackCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            Task { @MainActor in
+                self.previousAyah()
+            }
+            return .success
+        }
+    }
+
+    private func updateNowPlayingInfo(surahId: Int, ayahNumber: Int) {
+        let surahName = SurahMetadata.get(surahId).englishName
+        let reciterName = activeReciter.displayName
+        var info: [String: Any] = [
+            MPMediaItemPropertyTitle: "\(surahName) • Ayah \(ayahNumber)",
+            MPMediaItemPropertyArtist: reciterName,
+            MPMediaItemPropertyAlbumTitle: "The Noble Quran",
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? Double(playbackSpeed) : 0.0
+        ]
+        if let currentItem = player?.currentItem {
+            let dur = currentItem.asset.duration.seconds
+            if !dur.isNaN && dur > 0 {
+                info[MPMediaItemPropertyPlaybackDuration] = dur
+                info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentItem.currentTime().seconds
+            }
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    private func updateNowPlayingPlaybackRate(_ rate: Float) {
+        guard var info = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
+        info[MPNowPlayingInfoPropertyPlaybackRate] = Double(rate)
+        if let currentItem = player?.currentItem {
+            info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentItem.currentTime().seconds
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    private func clearNowPlayingInfo() {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    }
+
+    // MARK: - Controls
+
     func setPlaybackSpeed(_ speed: Float) {
         playbackSpeed = speed
         UserDefaults.standard.set(speed, forKey: "quranAudioPlaybackSpeed")
         if isPlaying {
             player?.rate = speed
+            updateNowPlayingPlaybackRate(speed)
         }
     }
 
@@ -221,6 +352,7 @@ final class RecitationPlayer: ObservableObject {
         } else if !isPlaying && currentSurahId == surahId && currentAyahNumber == ayahNumber, let player = player {
             player.play()
             isPlaying = true
+            updateNowPlayingPlaybackRate(playbackSpeed)
         } else {
             playAyah(surahId: surahId, ayahNumber: ayahNumber, reciter: reciter)
         }
@@ -238,6 +370,7 @@ final class RecitationPlayer: ObservableObject {
         } else if !isPlaying && currentSurahId == surahId && isContinuousPlayback, let player = player {
             player.play()
             isPlaying = true
+            updateNowPlayingPlaybackRate(playbackSpeed)
         } else {
             playSurah(surahId: surahId, startAyah: startAyah, totalAyahs: totalAyahs, reciter: chosen)
         }
@@ -284,22 +417,27 @@ final class RecitationPlayer: ObservableObject {
         currentAyahNumber = ayahNumber
         isContinuousPlayback = continuous
         activeReciter = chosen
+        let total = SurahMetadata.get(surahId).totalAyahs
+        totalAyahsForCurrentSurah = total > 0 ? total : 286
 
         let item = AVPlayerItem(url: url)
         player = AVPlayer(playerItem: item)
         player?.playImmediately(atRate: playbackSpeed)
         isPlaying = true
+        updateNowPlayingInfo(surahId: surahId, ayahNumber: ayahNumber)
         observeEnd()
     }
 
     func pause() {
         player?.pause()
         isPlaying = false
+        updateNowPlayingPlaybackRate(0.0)
     }
 
     func resume() {
         player?.playImmediately(atRate: playbackSpeed)
         isPlaying = true
+        updateNowPlayingPlaybackRate(playbackSpeed)
     }
 
     func stop() {
@@ -309,6 +447,7 @@ final class RecitationPlayer: ObservableObject {
         isContinuousPlayback = false
         currentAyahNumber = nil
         cleanupObservers()
+        clearNowPlayingInfo()
     }
 
     private func prepareSession() {
@@ -347,6 +486,7 @@ final class RecitationPlayer: ObservableObject {
                 self.isPlaying = false
                 self.isContinuousPlayback = false
                 self.currentAyahNumber = nil
+                self.clearNowPlayingInfo()
             }
         }
         errorObserver = NotificationCenter.default.addObserver(
@@ -358,6 +498,7 @@ final class RecitationPlayer: ObservableObject {
             self.isPlaying = false
             self.isContinuousPlayback = false
             self.currentAyahNumber = nil
+            self.clearNowPlayingInfo()
         }
     }
 }
