@@ -91,10 +91,10 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 8) {
                                 Text("Deen+")
-                                    .font(.title2.bold())
+                                    .font(.title2.bold())\
                                     .foregroundStyle(.primary)
 
-                                Text("v1.1.8")
+                                Text("v1.1.9")
                                     .font(.caption2.bold())
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -364,10 +364,11 @@ struct SettingsView: View {
                         Text("Modern Pill").tag("pill")
                         Text("Floating Capsule").tag("floating")
                         Text("Frosted Glass").tag("glass")
-                        Text("Minimalist Bar").tag("minimal")
+                        Text("Islamic Arch").tag("arch")
+                        Text("Aurora Glow").tag("aurora")
                         Text("Elevated Dock").tag("dock")
+                        Text("Minimalist Bar").tag("minimal")
                         Text("Compact Icons").tag("compact")
-                        Text("Standard Tab Bar").tag("standard")
                     }
                 } header: {
                     SettingsIconLabel(title: "Appearance", icon: "paintbrush.fill", color: .purple)
@@ -461,6 +462,9 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .safeAreaPadding(.bottom, 60)
             .onAppear {
+                if menuBarStyle == "standard" {
+                    menuBarStyle = "pill"
+                }
                 refreshCounts()
             }
             .onDisappear {

@@ -6,6 +6,7 @@
 //
 import SwiftUI
 import UserNotifications
+import AVFoundation
 
 @main
 struct Deen_App: App {
@@ -26,6 +27,11 @@ struct Deen_App: App {
     init() {
         NotificationManager.shared.requestPermission()
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, policy: .longFormAudio, options: [])
+        } catch {
+            // Silently continue
+        }
     }
 
     var body: some Scene {

@@ -94,43 +94,54 @@ struct AppearanceSettingsView: View {
 
             // MARK: - Navigation Menu Bar Customization
             Section {
-                // Live Interactive Menu Bar Preview
-                VStack(spacing: 8) {
+                // Interactive Menu Bar Live Preview
+                VStack(spacing: 6) {
+                    HStack {
+                        Text("Interactive Preview")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(activeAccent)
+                        Spacer()
+                        Text("Tap icons to test")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 4)
+
                     CustomBottomMenuBar(
                         selectedTab: $previewTab,
-                        style: menuBarStyle
+                        style: menuBarStyle == "standard" ? "pill" : menuBarStyle
                     )
-                    .disabled(true)
-                    .scaleEffect(0.92)
-                    .frame(height: menuBarStyle == "compact" ? 52 : 64)
+                    .scaleEffect(0.96)
+                    .frame(height: menuBarStyle == "compact" ? 54 : 66)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
+                .padding(.vertical, 6)
 
                 Picker("Menu Bar Style", selection: $menuBarStyle) {
                     Text("Modern Pill").tag("pill")
                     Text("Floating Capsule").tag("floating")
                     Text("Frosted Glass Island").tag("glass")
+                    Text("Islamic Arch Bar").tag("arch")
+                    Text("Aurora Glow Island").tag("aurora")
+                    Text("Elevated macOS Dock").tag("dock")
                     Text("Minimalist Bar").tag("minimal")
-                    Text("Elevated Dock").tag("dock")
                     Text("Compact Icons").tag("compact")
-                    Text("Standard Tab Bar").tag("standard")
                 }
 
-                if menuBarStyle != "standard" {
-                    Picker("Active Tab Indicator", selection: $menuBarIndicator) {
-                        Text("Pill Background").tag("pill")
-                        Text("Indicator Dot").tag("dot")
-                        Text("Accent Glow").tag("glow")
-                        Text("Underline").tag("line")
-                    }
-
-                    if menuBarStyle != "compact" {
-                        Toggle("Show Tab Text Labels", isOn: $menuBarShowLabels)
-                    }
-
-                    Toggle("Tactile Haptic Feedback", isOn: $menuBarHaptics)
+                Picker("Active Tab Indicator", selection: $menuBarIndicator) {
+                    Text("Pill Background").tag("pill")
+                    Text("Indicator Dot").tag("dot")
+                    Text("Accent Glow").tag("glow")
+                    Text("Underline Bar").tag("line")
+                    Text("Halo Ring").tag("halo")
+                    Text("Badge Capsule").tag("badge")
                 }
+
+                if menuBarStyle != "compact" {
+                    Toggle("Show Tab Text Labels", isOn: $menuBarShowLabels)
+                }
+
+                Toggle("Tactile Haptic Feedback", isOn: $menuBarHaptics)
             } header: {
                 Label("Navigation Menu Bar", systemImage: "menubar.rectangle")
                     .foregroundStyle(activeAccent)
@@ -162,37 +173,20 @@ struct AppearanceSettingsView: View {
                             .foregroundStyle(activeReaderTheme.secondaryTextColor(colorScheme: colorScheme))
                             .multilineTextAlignment(.center)
                     }
-
-                    HStack {
-                        HStack(spacing: 4) {
-                            Text("Ayah")
-                                .font(.caption2)
-                                .foregroundStyle(activeReaderTheme.secondaryTextColor(colorScheme: colorScheme))
-                            Text("1")
-                                .font(.caption.bold())
-                                .foregroundStyle(activeReaderTheme.accentColor(colorScheme: colorScheme))
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(activeReaderTheme.accentColor(colorScheme: colorScheme).opacity(0.14), in: Capsule())
-
-                        Spacer()
-
-                        Image(systemName: "play.circle.fill")
-                            .foregroundStyle(activeReaderTheme.accentColor(colorScheme: colorScheme))
-                    }
                 }
                 .padding(16)
-                .background(activeReaderTheme.cardBackgroundColor(colorScheme: colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .overlay(
+                .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(activeReaderTheme.cardBorderColor(colorScheme: colorScheme), lineWidth: 1)
+                        .fill(activeReaderTheme.cardBackgroundColor(colorScheme: colorScheme))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(activeReaderTheme.cardBorderColor(colorScheme: colorScheme), lineWidth: 1.5)
+                        )
                 )
-                .padding(.vertical, 6)
+                .padding(.vertical, 4)
 
-                // Reader Theme Selector Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                // Theme Selection Grid
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     ForEach(ReaderTheme.allCases) { theme in
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) {
@@ -289,6 +283,11 @@ struct AppearanceSettingsView: View {
         }
         .navigationTitle("Appearance")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if menuBarStyle == "standard" {
+                menuBarStyle = "pill"
+            }
+        }
     }
 
     // MARK: - Subview Helpers

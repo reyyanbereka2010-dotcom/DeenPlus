@@ -57,96 +57,48 @@ struct ContentView: View {
         AppAccentColor(rawValue: appAccentColor)?.color ?? .green
     }
 
+    private var sanitizedStyle: String {
+        menuBarStyle == "standard" ? "pill" : menuBarStyle
+    }
+
     var body: some View {
-        Group {
-            if menuBarStyle == "standard" {
-                // Native System Tab Bar
-                TabView(selection: $selectedTab) {
+        ZStack(alignment: .bottom) {
+            // Active View Layer
+            Group {
+                switch selectedTab {
+                case 0:
                     HomeView(selectedTab: $selectedTab)
-                        .tabItem {
-                            Label("Home", systemImage: "house.fill")
-                        }
-                        .tag(0)
-
+                case 1:
                     PrayerTimesView()
-                        .tabItem {
-                            Label("Prayer Times", systemImage: "clock.fill")
-                        }
-                        .tag(1)
-
+                case 2:
                     QuranView()
-                        .tabItem {
-                            Label("Quran", systemImage: "book.fill")
-                        }
-                        .tag(2)
-
+                case 3:
                     DailyDuasView()
-                        .tabItem {
-                            Label("Duas", systemImage: "hands.sparkles.fill")
-                        }
-                        .tag(3)
-
+                case 4:
                     QiblaView()
-                        .tabItem {
-                            Label("Qibla", systemImage: "location.north.fill")
-                        }
-                        .tag(4)
-
+                case 5:
                     TasbihView()
-                        .tabItem {
-                            Label("Tasbih", systemImage: "circle.circle.fill")
-                        }
-                        .tag(5)
-
+                case 6:
                     SettingsView()
-                        .tabItem {
-                            Label("Settings", systemImage: "gearshape.fill")
-                        }
-                        .tag(6)
+                default:
+                    HomeView(selectedTab: $selectedTab)
                 }
-                .tint(accent)
-                .onAppear {
-                    let appearance = UITabBarAppearance()
-                    appearance.configureWithDefaultBackground()
-                    UITabBar.appearance().standardAppearance = appearance
-                    UITabBar.appearance().scrollEdgeAppearance = appearance
-                }
-            } else {
-                // Modern Custom Navigation Menu Bar (Rectangular Pill or Floating Capsule)
-                ZStack(alignment: .bottom) {
-                    // Active View Layer
-                    Group {
-                        switch selectedTab {
-                        case 0:
-                            HomeView(selectedTab: $selectedTab)
-                        case 1:
-                            PrayerTimesView()
-                        case 2:
-                            QuranView()
-                        case 3:
-                            DailyDuasView()
-                        case 4:
-                            QiblaView()
-                        case 5:
-                            TasbihView()
-                        case 6:
-                            SettingsView()
-                        default:
-                            HomeView(selectedTab: $selectedTab)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                    // Bottom Custom Bar
-                    if !hideTabBar {
-                        CustomBottomMenuBar(
-                            selectedTab: $selectedTab,
-                            style: menuBarStyle
-                        )
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-                }
-                .ignoresSafeArea(.keyboard, edges: .bottom)
+            // Bottom Custom Navigation Menu Bar
+            if !hideTabBar {
+                CustomBottomMenuBar(
+                    selectedTab: $selectedTab,
+                    style: sanitizedStyle
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onAppear {
+            if menuBarStyle == "standard" {
+                menuBarStyle = "pill"
             }
         }
     }
@@ -196,9 +148,17 @@ struct CustomBottomMenuBar: View {
                                         .frame(width: shouldShowLabels ? 38 : 42, height: shouldShowLabels ? 30 : 38)
                                 case "glow":
                                     Circle()
-                                        .fill(accent.opacity(0.35))
+                                        .fill(accent.opacity(0.38))
                                         .frame(width: 34, height: 34)
-                                        .blur(radius: 5)
+                                        .blur(radius: 6)
+                                case "halo":
+                                    Circle()
+                                        .stroke(accent.opacity(0.85), lineWidth: 1.8)
+                                        .frame(width: 32, height: 32)
+                                case "badge":
+                                    Capsule()
+                                        .fill(accent.opacity(0.24))
+                                        .frame(width: shouldShowLabels ? 36 : 42, height: shouldShowLabels ? 28 : 36)
                                 default:
                                     EmptyView()
                                 }
@@ -215,32 +175,35 @@ struct CustomBottomMenuBar: View {
                                 .font(.system(size: 10, weight: isSelected ? .bold : .medium))
                                 .foregroundStyle(isSelected ? accent : Color.secondary)
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.8)
+                                .minimumScaleFactor(0.75)
                         }
 
                         if isSelected {
                             if menuBarIndicator == "dot" {
                                 Circle()
                                     .fill(accent)
-                                    .frame(width: 4, height: 4)
+                                    .frame(width: 4.5, height: 4.5)
+                                    .shadow(color: accent.opacity(0.5), radius: 2)
                                     .padding(.top, shouldShowLabels ? 1 : 2)
                             } else if menuBarIndicator == "line" {
                                 Capsule()
                                     .fill(accent)
                                     .frame(width: 16, height: 2.5)
+                                    .shadow(color: accent.opacity(0.4), radius: 2)
                                     .padding(.top, shouldShowLabels ? 1 : 2)
                             }
                         } else if menuBarIndicator == "dot" || menuBarIndicator == "line" {
                             Color.clear
-                                .frame(height: shouldShowLabels ? 5 : 6)
+                                .frame(height: shouldShowLabels ? 5.5 : 6.5)
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .offset(y: style == "dock" && isSelected ? -4 : 0)
-                    .scaleEffect(style == "dock" && isSelected ? 1.08 : 1.0)
+                    .offset(y: style == "dock" && isSelected ? -5 : 0)
+                    .scaleEffect(style == "dock" && isSelected ? 1.12 : 1.0)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(item.title)
             }
         }
         .padding(.horizontal, style == "minimal" ? 4 : (style == "compact" ? 16 : 8))
@@ -255,24 +218,37 @@ struct CustomBottomMenuBar: View {
 
     private var bottomInnerPadding: CGFloat {
         switch style {
-        case "floating", "glass", "compact":
+        case "floating", "glass", "arch", "aurora", "compact":
             return 10
         case "dock":
             return 12
         case "minimal":
-            return 26
-        default:
             return 28
+        default:
+            return 12
         }
     }
 
     private var outerHorizontalPadding: CGFloat {
         switch style {
-        case "floating", "glass":
-            return 14
+        case "floating", "glass", "aurora", "arch":
+            return 12
         case "compact":
             return 24
         case "dock":
+            return 14
+        case "minimal":
+            return 0
+        default:
+            return 10
+        }
+    }
+
+    private var outerBottomPadding: CGFloat {
+        switch style {
+        case "floating", "compact", "dock", "aurora", "arch":
+            return 10
+        case "glass":
             return 12
         case "minimal":
             return 0
@@ -281,43 +257,86 @@ struct CustomBottomMenuBar: View {
         }
     }
 
-    private var outerBottomPadding: CGFloat {
-        switch style {
-        case "floating", "compact":
-            return 12
-        case "glass":
-            return 14
-        case "dock":
-            return 10
-        case "minimal":
-            return 0
-        default:
-            return 0
-        }
-    }
-
     @ViewBuilder
     private var barBackgroundView: some View {
         switch style {
         case "floating":
             ZStack {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                Capsule()
                     .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                Capsule()
+                    .stroke(
+                        LinearGradient(
+                            colors: [accent.opacity(0.35), Color.primary.opacity(0.08)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.2
+                    )
             }
-            .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: -2)
+            .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 4)
 
         case "glass":
             ZStack {
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(accent.opacity(0.06))
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(accent.opacity(0.32), lineWidth: 1.2)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [accent.opacity(0.45), Color.white.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.2
+                    )
             }
             .shadow(color: accent.opacity(0.22), radius: 16, x: 0, y: 4)
+
+        case "arch":
+            ZStack {
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 26,
+                    bottomLeadingRadius: 18,
+                    bottomTrailingRadius: 18,
+                    topTrailingRadius: 26,
+                    style: .continuous
+                )
+                .fill(.ultraThinMaterial)
+
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 26,
+                    bottomLeadingRadius: 18,
+                    bottomTrailingRadius: 18,
+                    topTrailingRadius: 26,
+                    style: .continuous
+                )
+                .stroke(
+                    LinearGradient(
+                        colors: [accent.opacity(0.55), Color(red: 0.88, green: 0.76, blue: 0.45).opacity(0.35)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1.2
+                )
+            }
+            .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 4)
+
+        case "aurora":
+            ZStack {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(
+                        AngularGradient(
+                            colors: [accent, .cyan, .purple, .mint, accent],
+                            center: .center
+                        ).opacity(0.45),
+                        lineWidth: 1.4
+                    )
+            }
+            .shadow(color: accent.opacity(0.25), radius: 18, x: 0, y: 4)
 
         case "minimal":
             ZStack(alignment: .top) {
@@ -333,27 +352,34 @@ struct CustomBottomMenuBar: View {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(.regularMaterial)
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.22), Color.primary.opacity(0.08)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
             }
-            .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 3)
+            .shadow(color: Color.black.opacity(0.16), radius: 18, x: 0, y: 4)
 
         case "compact":
             ZStack {
                 Capsule()
                     .fill(.ultraThinMaterial)
                 Capsule()
-                    .stroke(Color.primary.opacity(0.09), lineWidth: 1)
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
             }
             .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 2)
 
-        default:
+        default: // "pill"
             ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(.regularMaterial)
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.primary.opacity(0.07), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             }
-            .shadow(color: Color.black.opacity(0.10), radius: 12, x: 0, y: -2)
+            .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: 3)
         }
     }
 }

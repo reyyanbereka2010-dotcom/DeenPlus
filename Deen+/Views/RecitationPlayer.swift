@@ -2,6 +2,9 @@ import Foundation
 import AVFoundation
 import Combine
 import MediaPlayer
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - Reciter and URL provider
 
@@ -132,6 +135,10 @@ final class RecitationPlayer: ObservableObject {
     private var interruptionObserver: Any?
     private let reciterStorageKey = "selectedQuranReciter"
 
+    #if canImport(UIKit)
+    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+    #endif
+
     init() {
         if let saved = UserDefaults.standard.string(forKey: reciterStorageKey),
            let reciter = Reciter(rawValue: saved) {
@@ -162,6 +169,9 @@ final class RecitationPlayer: ObservableObject {
         if let interruptionObserver {
             NotificationCenter.default.removeObserver(interruptionObserver)
         }
+        #if canImport(UIKit)
+        endAudioBackgroundTask()
+        #endif
     }
 
     private func cleanupObservers() {
@@ -173,6 +183,26 @@ final class RecitationPlayer: ObservableObject {
             NotificationCenter.default.removeObserver(errorObserver)
             self.errorObserver = nil
         }
+    }
+
+    // MARK: - Background Audio Task Lifecyle
+
+    private func beginAudioBackgroundTask() {
+        #if canImport(UIKit)
+        endAudioBackgroundTask()
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "DeenRecitationBackgroundTransition") { [weak self] in
+            self?.endAudioBackgroundTask()
+        }
+        #endif
+    }
+
+    private func endAudioBackgroundTask() {
+        #if canImport(UIKit)
+        if backgroundTaskID != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTaskID)
+            backgroundTaskID = .invalid
+        }
+        #endif
     }
 
     // MARK: - Audio Session Interruption
@@ -261,6 +291,26 @@ final class RecitationPlayer: ObservableObject {
             }
             return .success
         }
+
+        center.skipForwardCommand.isEnabled = true
+        center.skipForwardCommand.preferredIntervals = [15]
+        center.skipForwardCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            Task { @MainActor in
+                self.nextAyah()
+            }
+            return .success
+        }
+
+        center.skipBackwardCommand.isEnabled = true
+        center.skipBackwardCommand.preferredIntervals = [15]
+        center.skipBackwardCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            Task { @MainActor in
+                self.previousAyah()
+            }
+            return .success
+        }
     }
 
     private func updateNowPlayingInfo(surahId: Int, ayahNumber: Int) {
@@ -269,8 +319,9 @@ final class RecitationPlayer: ObservableObject {
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: "\(surahName) • Ayah \(ayahNumber)",
             MPMediaItemPropertyArtist: reciterName,
-            MPMediaItemPropertyAlbumTitle: "The Noble Quran",
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? Double(playbackSpeed) : 0.0
+            MPMediaItemPropertyAlbumTitle: "The Noble Quran (القرآن الكريم)",
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? Double(playbackSpeed) : 0.0,
+            MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue
         ]
         if let currentItem = player?.currentItem {
             let dur = currentItem.asset.duration.seconds
@@ -388,6 +439,10 @@ final class RecitationPlayer: ObservableObject {
         guard let surah = currentSurahId, let current = currentAyahNumber else { return }
         if current < totalAyahsForCurrentSurah {
             playAyahInternal(surahId: surah, ayahNumber: current + 1, continuous: isContinuousPlayback, reciter: activeReciter)
+        } else if isContinuousPlayback && surah < 114 {
+            let nextSurah = surah + 1
+            let nextTotal = SurahMetadata.get(nextSurah).totalAyahs
+            playSurah(surahId: nextSurah, startAyah: 1, totalAyahs: nextTotal > 0 ? nextTotal : 286, reciter: activeReciter)
         }
     }
 
@@ -395,6 +450,10 @@ final class RecitationPlayer: ObservableObject {
         guard let surah = currentSurahId, let current = currentAyahNumber else { return }
         if current > 1 {
             playAyahInternal(surahId: surah, ayahNumber: current - 1, continuous: isContinuousPlayback, reciter: activeReciter)
+        } else if isContinuousPlayback && surah > 1 {
+            let prevSurah = surah - 1
+            let prevTotal = SurahMetadata.get(prevSurah).totalAyahs
+            playSurah(surahId: prevSurah, startAyah: 1, totalAyahs: prevTotal > 0 ? prevTotal : 286, reciter: activeReciter)
         }
     }
 
@@ -421,11 +480,17 @@ final class RecitationPlayer: ObservableObject {
         totalAyahsForCurrentSurah = total > 0 ? total : 286
 
         let item = AVPlayerItem(url: url)
-        player = AVPlayer(playerItem: item)
+        // Reuse existing player to avoid tearing down background hardware audio session
+        if let existingPlayer = player {
+            existingPlayer.replaceCurrentItem(with: item)
+        } else {
+            player = AVPlayer(playerItem: item)
+        }
         player?.playImmediately(atRate: playbackSpeed)
         isPlaying = true
         updateNowPlayingInfo(surahId: surahId, ayahNumber: ayahNumber)
         observeEnd()
+        endAudioBackgroundTask()
     }
 
     func pause() {
@@ -435,6 +500,7 @@ final class RecitationPlayer: ObservableObject {
     }
 
     func resume() {
+        prepareSession()
         player?.playImmediately(atRate: playbackSpeed)
         isPlaying = true
         updateNowPlayingPlaybackRate(playbackSpeed)
@@ -448,15 +514,22 @@ final class RecitationPlayer: ObservableObject {
         currentAyahNumber = nil
         cleanupObservers()
         clearNowPlayingInfo()
+        endAudioBackgroundTask()
     }
 
     private func prepareSession() {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setCategory(.playback, mode: .default, policy: .longFormAudio, options: [])
             try session.setActive(true)
         } catch {
-            // Silently ignore session errors
+            do {
+                let session = AVAudioSession.sharedInstance()
+                try session.setCategory(.playback, mode: .default, options: [])
+                try session.setActive(true)
+            } catch {
+                // Silently ignore session errors
+            }
         }
     }
 
@@ -476,17 +549,31 @@ final class RecitationPlayer: ObservableObject {
             }
             self.currentAyahPlayCount = 1
 
+            self.beginAudioBackgroundTask()
             if self.isContinuousPlayback,
                let surah = self.currentSurahId,
-               let currentAyah = self.currentAyahNumber,
-               currentAyah < self.totalAyahsForCurrentSurah {
-                let nextAyah = currentAyah + 1
-                self.playAyahInternal(surahId: surah, ayahNumber: nextAyah, continuous: true, reciter: self.activeReciter)
+               let currentAyah = self.currentAyahNumber {
+                if currentAyah < self.totalAyahsForCurrentSurah {
+                    let nextAyah = currentAyah + 1
+                    self.playAyahInternal(surahId: surah, ayahNumber: nextAyah, continuous: true, reciter: self.activeReciter)
+                } else if surah < 114 {
+                    // Seamlessly continue recitation to next Surah even when outside the app
+                    let nextSurah = surah + 1
+                    let nextTotal = SurahMetadata.get(nextSurah).totalAyahs
+                    self.playSurah(surahId: nextSurah, startAyah: 1, totalAyahs: nextTotal > 0 ? nextTotal : 286, reciter: self.activeReciter)
+                } else {
+                    self.isPlaying = false
+                    self.isContinuousPlayback = false
+                    self.currentAyahNumber = nil
+                    self.clearNowPlayingInfo()
+                    self.endAudioBackgroundTask()
+                }
             } else {
                 self.isPlaying = false
                 self.isContinuousPlayback = false
                 self.currentAyahNumber = nil
                 self.clearNowPlayingInfo()
+                self.endAudioBackgroundTask()
             }
         }
         errorObserver = NotificationCenter.default.addObserver(
@@ -499,6 +586,7 @@ final class RecitationPlayer: ObservableObject {
             self.isContinuousPlayback = false
             self.currentAyahNumber = nil
             self.clearNowPlayingInfo()
+            self.endAudioBackgroundTask()
         }
     }
 }

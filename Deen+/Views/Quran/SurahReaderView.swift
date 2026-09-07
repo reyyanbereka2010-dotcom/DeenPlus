@@ -497,7 +497,7 @@ struct SurahReaderView: View {
                 }
             }
             .onDisappear {
-                recitationPlayer.pause()
+                // Keep recitationPlayer active so recitation continues when moving between tabs or outside the app
                 translationNarrator.stop()
                 #if canImport(UIKit)
                 UIApplication.shared.isIdleTimerDisabled = false
@@ -748,37 +748,37 @@ struct SurahReaderView: View {
             // Pass 1: Immediate jump to force LazyVStack to instantiate intermediate rows
             proxy.scrollTo(target, anchor: .top)
 
-        // Staged iterative adjustments as SwiftUI calculates real verse heights
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-            proxy.scrollTo(target, anchor: .top)
-
+            // Staged iterative adjustments as SwiftUI calculates real verse heights
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
                 proxy.scrollTo(target, anchor: .top)
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                    if animated {
-                        withAnimation(.easeInOut(duration: 0.35)) {
+                    proxy.scrollTo(target, anchor: .top)
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                        if animated {
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                proxy.scrollTo(target, anchor: .top)
+                            }
+                        } else {
                             proxy.scrollTo(target, anchor: .top)
                         }
-                    } else {
-                        proxy.scrollTo(target, anchor: .top)
-                    }
 
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                        proxy.scrollTo(target, anchor: .top)
-                        hasFinishedInitialScroll = true
-                    }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            proxy.scrollTo(target, anchor: .top)
+                            hasFinishedInitialScroll = true
+                        }
 
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                        withAnimation(.easeOut(duration: 0.5)) {
-                            if highlightedAyahNumber == target {
-                                highlightedAyahNumber = nil
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                            withAnimation(.easeOut(duration: 0.5)) {
+                                if highlightedAyahNumber == target {
+                                    highlightedAyahNumber = nil
+                                }
                             }
                         }
                     }
                 }
             }
-        }
         }
     }
 
