@@ -31,7 +31,7 @@ struct SettingsView: View {
     @AppStorage("appTheme")
     private var appTheme = "System"
     @AppStorage("appAccentColor")
-    private var appAccentColor: String = "emerald"
+    private var appAccentColor = "emerald"
     @AppStorage("menuBarStyle")
     private var menuBarStyle: String = "pill"
 
@@ -91,7 +91,7 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 8) {
                                 Text("Deen+")
-                                    .font(.title2.bold())\
+                                    .font(.title2.bold())
                                     .foregroundStyle(.primary)
 
                                 Text("v1.1.9")

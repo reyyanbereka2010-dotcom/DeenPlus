@@ -1,3 +1,10 @@
+//
+//  RecitationPlayer.swift
+//  Deen+
+//
+//  Created by Reyyan Bereka on 7/16/26.
+//
+
 import Foundation
 import AVFoundation
 import Combine
@@ -169,9 +176,6 @@ final class RecitationPlayer: ObservableObject {
         if let interruptionObserver {
             NotificationCenter.default.removeObserver(interruptionObserver)
         }
-        #if canImport(UIKit)
-        endAudioBackgroundTask()
-        #endif
     }
 
     private func cleanupObservers() {
@@ -191,7 +195,9 @@ final class RecitationPlayer: ObservableObject {
         #if canImport(UIKit)
         endAudioBackgroundTask()
         backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "DeenRecitationBackgroundTransition") { [weak self] in
-            self?.endAudioBackgroundTask()
+            Task { @MainActor in
+                self?.endAudioBackgroundTask()
+            }
         }
         #endif
     }
