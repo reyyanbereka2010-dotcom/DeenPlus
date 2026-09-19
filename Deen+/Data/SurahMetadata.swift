@@ -140,3 +140,49 @@ struct SurahMetadata {
         return info[surah] ?? SurahInfo(englishName: "Surah \(surah)", englishTranslation: "", revelationPlace: "Meccan", totalAyahs: 0)
     }
 }
+
+// MARK: - 30 Juz (Para) Structure
+
+struct JuzInfo: Identifiable, Sendable {
+    let id: Int
+    let arabicName: String
+    let englishTitle: String
+    let startSurah: Int
+    let startAyah: Int
+    let description: String
+}
+
+struct JuzMetadata {
+    static let allJuz: [JuzInfo] = [
+        JuzInfo(id: 1, arabicName: "الم", englishTitle: "Alif Lam Meem", startSurah: 1, startAyah: 1, description: "Al-Fatihah 1:1 – Al-Baqarah 2:141"),
+        JuzInfo(id: 2, arabicName: "سيقول", englishTitle: "Sayaqool", startSurah: 2, startAyah: 142, description: "Al-Baqarah 2:142 – Al-Baqarah 2:252"),
+        JuzInfo(id: 3, arabicName: "تلك الرسل", englishTitle: "Tilka'r-Rusul", startSurah: 2, startAyah: 253, description: "Al-Baqarah 2:253 – Ali 'Imran 3:92"),
+        JuzInfo(id: 4, arabicName: "لن تنالوا", englishTitle: "Lan Tanaloo", startSurah: 3, startAyah: 93, description: "Ali 'Imran 3:93 – An-Nisa' 4:23"),
+        JuzInfo(id: 5, arabicName: "والمحصنات", englishTitle: "Wa'l-Muhsanat", startSurah: 4, startAyah: 24, description: "An-Nisa' 4:24 – An-Nisa' 4:147"),
+        JuzInfo(id: 6, arabicName: "لا يحب الله", englishTitle: "La Yuhibbullah", startSurah: 4, startAyah: 148, description: "An-Nisa' 4:148 – Al-Ma'idah 5:81"),
+        JuzInfo(id: 7, arabicName: "وإذا سمعوا", englishTitle: "Wa Iza Sami'oo", startSurah: 5, startAyah: 82, description: "Al-Ma'idah 5:82 – Al-An'am 6:110"),
+        JuzInfo(id: 8, arabicName: "ولو أننا", englishTitle: "Wa Law Annana", startSurah: 6, startAyah: 111, description: "Al-An'am 6:111 – Al-A'raf 7:87"),
+        JuzInfo(id: 9, arabicName: "قال الملأ", englishTitle: "Qal al-Mala'u", startSurah: 7, startAyah: 88, description: "Al-A'raf 7:88 – Al-Anfal 8:40"),
+        JuzInfo(id: 10, arabicName: "واعلموا", englishTitle: "Wa'lamoo", startSurah: 8, startAyah: 41, description: "Al-Anfal 8:41 – At-Tawbah 9:92"),
+        JuzInfo(id: 11, arabicName: "يعتذرون", englishTitle: "Ya'taziroon", startSurah: 9, startAyah: 93, description: "At-Tawbah 9:93 – Hud 11:5"),
+        JuzInfo(id: 12, arabicName: "وما من دابة", englishTitle: "Wa Mamin Da'abbatin", startSurah: 11, startAyah: 6, description: "Hud 11:6 – Yusuf 12:52"),
+        JuzInfo(id: 13, arabicName: "وما أبرئ", englishTitle: "Wa Ma Ubarri'u", startSurah: 12, startAyah: 53, description: "Yusuf 12:53 – Ibrahim 14:52"),
+        JuzInfo(id: 14, arabicName: "ربما", englishTitle: "Rubama", startSurah: 15, startAyah: 1, description: "Al-Hijr 15:1 – An-Nahl 16:128"),
+        JuzInfo(id: 15, arabicName: "سبحان الذي", englishTitle: "Subhana'llazi", startSurah: 17, startAyah: 1, description: "Al-Isra 17:1 – Al-Kahf 18:74"),
+        JuzInfo(id: 16, arabicName: "قال ألم", englishTitle: "Qala Alam", startSurah: 18, startAyah: 75, description: "Al-Kahf 18:75 – Ta-Ha 20:135"),
+        JuzInfo(id: 17, arabicName: "اقترب للناس", englishTitle: "Iqtaraba li'n-Nas", startSurah: 21, startAyah: 1, description: "Al-Anbiya 21:1 – Al-Hajj 22:78"),
+        JuzInfo(id: 18, arabicName: "قد أفلح", englishTitle: "Qad Aflaha", startSurah: 23, startAyah: 1, description: "Al-Mu'minun 23:1 – Al-Furqan 25:20"),
+        JuzInfo(id: 19, arabicName: "وقال الذين", englishTitle: "Wa Qala'llazina", startSurah: 25, startAyah: 21, description: "Al-Furqan 25:21 – An-Naml 27:55"),
+        JuzInfo(id: 20, arabicName: "أمن خلق", englishTitle: "Amman Khalaq", startSurah: 27, startAyah: 56, description: "An-Naml 27:56 – Al-Ankabut 29:45"),
+        JuzInfo(id: 21, arabicName: "اتل ما أوحي", englishTitle: "Utlu Ma Oohiya", startSurah: 29, startAyah: 46, description: "Al-Ankabut 29:46 – Al-Ahzab 33:30"),
+        JuzInfo(id: 22, arabicName: "ومن يقنت", englishTitle: "Wa Man Yaqnut", startSurah: 33, startAyah: 31, description: "Al-Ahzab 33:31 – Ya-Sin 36:27"),
+        JuzInfo(id: 23, arabicName: "وما لي", englishTitle: "Wa Ma Liya", startSurah: 36, startAyah: 28, description: "Ya-Sin 36:28 – Az-Zumar 39:31"),
+        JuzInfo(id: 24, arabicName: "فمن أظلم", englishTitle: "Faman Azlamu", startSurah: 39, startAyah: 32, description: "Az-Zumar 39:32 – Fussilat 41:46"),
+        JuzInfo(id: 25, arabicName: "إليه يرد", englishTitle: "Ilayhi Yuraddu", startSurah: 41, startAyah: 47, description: "Fussilat 41:47 – Al-Jathiyah 45:37"),
+        JuzInfo(id: 26, arabicName: "حم", englishTitle: "Ha Meem", startSurah: 46, startAyah: 1, description: "Al-Ahqaf 46:1 – Adh-Dhariyat 51:30"),
+        JuzInfo(id: 27, arabicName: "قال فما خطبكم", englishTitle: "Qala Fama Khatbukum", startSurah: 51, startAyah: 31, description: "Adh-Dhariyat 51:31 – Al-Hadid 57:29"),
+        JuzInfo(id: 28, arabicName: "قد سمع الله", englishTitle: "Qad Sami'a Allah", startSurah: 58, startAyah: 1, description: "Al-Mujadila 58:1 – At-Tahrim 66:12"),
+        JuzInfo(id: 29, arabicName: "تبارك الذي", englishTitle: "Tabaraka'llazi", startSurah: 67, startAyah: 1, description: "Al-Mulk 67:1 – Al-Mursalat 77:50"),
+        JuzInfo(id: 30, arabicName: "عمّ", englishTitle: "Juz 'Amma", startSurah: 78, startAyah: 1, description: "An-Naba 78:1 – An-Nas 114:6")
+    ]
+}

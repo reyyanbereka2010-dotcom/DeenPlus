@@ -49,6 +49,7 @@ struct DailyAyah {
 }
 
 struct HomeView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var hideTabBar = false
     @Binding var selectedTab: Int
     @EnvironmentObject var prayerManager: PrayerManager
@@ -409,6 +410,8 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 80)
+                    .frame(maxWidth: horizontalSizeClass == .regular ? 680 : .infinity)
+                    .frame(maxWidth: .infinity)
                 }
             }
             .navigationTitle("")
@@ -940,20 +943,18 @@ struct HomeView: View {
     
     private var bentoGridSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("QUICK EXPLORATION")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.white.opacity(0.75))
-                .tracking(0.5)
+            Text("EXPLORE")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.white.opacity(0.8))
+                .tracking(0.6)
                 .padding(.horizontal, 4)
             
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 // Quran Tile
                 BentoTile(
                     title: "Holy Quran",
-                    subtitle: "114 Surahs & Recitation",
                     icon: "book.fill",
-                    accentColor: Color(red: 0.2, green: 0.82, blue: 0.52),
-                    badge: "Read"
+                    accentColor: Color(red: 0.2, green: 0.82, blue: 0.52)
                 ) {
                     triggerHaptic()
                     selectedTab = 2
@@ -962,10 +963,8 @@ struct HomeView: View {
                 // Duas Tile
                 BentoTile(
                     title: "Daily Duas",
-                    subtitle: "Supplications & Adhkar",
                     icon: "hands.sparkles.fill",
-                    accentColor: Color(red: 0.72, green: 0.48, blue: 0.98),
-                    badge: "Daily"
+                    accentColor: Color(red: 0.72, green: 0.48, blue: 0.98)
                 ) {
                     triggerHaptic()
                     selectedTab = 3
@@ -973,11 +972,9 @@ struct HomeView: View {
                 
                 // Qibla Tile
                 BentoTile(
-                    title: "Qibla Compass",
-                    subtitle: "Direction to Kaaba",
+                    title: "Qibla",
                     icon: "location.north.fill",
-                    accentColor: Color(red: 0.95, green: 0.68, blue: 0.25),
-                    badge: "Compass"
+                    accentColor: Color(red: 0.95, green: 0.68, blue: 0.25)
                 ) {
                     triggerHaptic()
                     selectedTab = 4
@@ -985,11 +982,9 @@ struct HomeView: View {
                 
                 // Tasbih Tile
                 BentoTile(
-                    title: "Digital Tasbih",
-                    subtitle: totalTasbihCount > 0 ? "\(totalTasbihCount) recited" : "Dhikr Counter",
+                    title: "Tasbih",
                     icon: "circle.circle.fill",
-                    accentColor: Color(red: 0.25, green: 0.75, blue: 0.98),
-                    badge: "Counter"
+                    accentColor: Color(red: 0.25, green: 0.75, blue: 0.98)
                 ) {
                     triggerHaptic()
                     selectedTab = 5
@@ -1009,67 +1004,49 @@ struct HomeView: View {
 
 struct BentoTile: View {
     let title: String
-    let subtitle: String
     let icon: String
     let accentColor: Color
-    let badge: String
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    ZStack {
-                        Circle()
-                            .fill(accentColor.opacity(0.22))
-                            .frame(width: 44, height: 44)
-                        
-                        Image(systemName: icon)
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(accentColor)
-                    }
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(accentColor.opacity(0.22))
+                        .frame(width: 44, height: 44)
                     
-                    Spacer()
-                    
-                    Text(badge)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.12))
-                        .clipShape(Capsule())
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(accentColor)
                 }
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                    
-                    Text(subtitle)
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .lineLimit(1)
-                }
+                Text(title)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                
+                Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                    
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(
-                            LinearGradient(
-                                colors: [accentColor.opacity(0.4), Color.white.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                }
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [accentColor.opacity(0.35), Color.white.opacity(0.12)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
             )
-            .shadow(color: Color.black.opacity(0.14), radius: 8, y: 4)
+            .shadow(color: Color.black.opacity(0.12), radius: 8, y: 3)
         }
         .buttonStyle(ScaleButtonStyle())
     }

@@ -146,7 +146,7 @@ struct VerseRow: View {
         .onAppear {
             checkBookmark()
         }
-        .onChange(of: verse.id) { _ in
+        .onChange(of: verse.id) { _, _ in
             checkBookmark()
         }
         .onDisappear {

@@ -211,6 +211,28 @@ struct PrayerTimesView: View {
                         }
                     }
                 }
+
+                // Night & Qiyam Timings (Tahajjud & Islamic Midnight)
+                if let night = prayerManager.prayerTimes.calculateNightTimings(for: currentTime) {
+                    Section("Night & Voluntary Prayers") {
+                        NightTimingRow(
+                            title: "Tahajjud (Last Third)",
+                            time: night.formattedTahajjud,
+                            icon: "moon.stars.fill",
+                            isActive: night.isTahajjudActiveNow
+                        )
+                        .listRowBackground(
+                            night.isTahajjudActiveNow ? Color.purple.opacity(0.12) : nil
+                        )
+
+                        NightTimingRow(
+                            title: "Islamic Midnight",
+                            time: night.formattedMidnight,
+                            icon: "clock.arrow.circlepath",
+                            isActive: false
+                        )
+                    }
+                }
             }
             .navigationTitle("Prayer Times")
             .safeAreaPadding(.bottom, 60)
@@ -280,11 +302,7 @@ struct PrayerRow: View {
                     }
                 }
 
-                if name == "Sunrise" {
-                    Text("Shurooq")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+
             }
 
             Spacer()
@@ -323,5 +341,49 @@ struct PrayerRow: View {
             return PrayerTimesView.prayerDisplayFormatter.string(from: date)
         }
         return time
+    }
+}
+
+struct NightTimingRow: View {
+    let title: String
+    let time: String
+    let icon: String
+    let isActive: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(isActive ? Color.purple.opacity(0.2) : Color.indigo.opacity(0.12))
+                    .frame(width: 38, height: 38)
+
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: isActive ? .bold : .medium))
+                    .foregroundStyle(isActive ? Color.purple : Color.indigo)
+            }
+            .frame(width: 38, height: 38)
+
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(isActive ? .headline.weight(.bold) : .headline)
+                    .foregroundStyle(isActive ? Color.purple : Color.primary)
+
+                if isActive {
+                    Text("ACTIVE NOW")
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.purple, in: Capsule())
+                }
+            }
+
+            Spacer()
+
+            Text(time)
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(isActive ? Color.purple : Color.primary)
+        }
+        .padding(.vertical, 4)
     }
 }

@@ -20,11 +20,13 @@ struct Deen_App: App {
         AppAccentColor(rawValue: appAccentColor)?.color ?? .green
     }
 
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var locationManager = LocationManager()
     @StateObject private var qiblaManager = QiblaManager()
     @StateObject private var prayerManager = PrayerManager()
 
     init() {
+        BackgroundTaskManager.shared.registerBackgroundTasks()
         NotificationManager.shared.requestPermission()
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         do {
@@ -44,6 +46,14 @@ struct Deen_App: App {
                 .environmentObject(qiblaManager)
                 .preferredColorScheme(colorScheme)
                 .tint(accentColor)
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        prayerManager.updatePrayerLiveActivity()
+                    } else if newPhase == .background {
+                        prayerManager.updatePrayerLiveActivity()
+                        BackgroundTaskManager.shared.scheduleAllTasks()
+                    }
+                }
 
         }
 

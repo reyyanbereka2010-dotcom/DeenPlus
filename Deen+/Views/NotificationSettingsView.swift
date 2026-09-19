@@ -74,7 +74,7 @@ struct NotificationSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Toggle("Enable Prayer Notifications", isOn: $masterEnabled)
-                .onChange(of: masterEnabled) { newValue in
+                .onChange(of: masterEnabled) { _, newValue in
                     if newValue {
                         NotificationManager.shared.requestPermission()
                         NotificationManager.shared.schedulePrayerNotifications(prayerTimes: prayerManager.prayerTimes)
@@ -168,11 +168,11 @@ struct NotificationSettingsView: View {
             Text("Prayers")
         }
         .disabled(!masterEnabled)
-        .onChange(of: fajrEnabled) { _ in updateNotifications() }
-        .onChange(of: dhuhrEnabled) { _ in updateNotifications() }
-        .onChange(of: asrEnabled) { _ in updateNotifications() }
-        .onChange(of: maghribEnabled) { _ in updateNotifications() }
-        .onChange(of: ishaEnabled) { _ in updateNotifications() }
+        .onChange(of: fajrEnabled) { _, _ in updateNotifications() }
+        .onChange(of: dhuhrEnabled) { _, _ in updateNotifications() }
+        .onChange(of: asrEnabled) { _, _ in updateNotifications() }
+        .onChange(of: maghribEnabled) { _, _ in updateNotifications() }
+        .onChange(of: ishaEnabled) { _, _ in updateNotifications() }
     }
 
     private var athanHapticSection: some View {

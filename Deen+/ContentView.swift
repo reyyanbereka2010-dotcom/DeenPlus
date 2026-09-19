@@ -52,6 +52,9 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @AppStorage("menuBarStyle") private var menuBarStyle: String = "pill"
     @AppStorage("appAccentColor") private var appAccentColor: String = "emerald"
+    @AppStorage("hasCompletedOnboardingV1") private var hasCompletedOnboarding: Bool = false
+    @State private var showOnboarding: Bool = false
+    @State private var showLaunchSplash: Bool = true
 
     private var accent: Color {
         AppAccentColor(rawValue: appAccentColor)?.color ?? .green
@@ -94,11 +97,27 @@ struct ContentView: View {
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+
+            // Launch Splash Animation
+            if showLaunchSplash {
+                AppLaunchSplashView(isAnimating: $showLaunchSplash)
+                    .transition(.opacity)
+                    .zIndex(100)
+            }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .sheet(isPresented: $showOnboarding) {
+            OnboardingSheetView(isPresented: $showOnboarding)
+        }
         .onAppear {
             if menuBarStyle == "standard" {
                 menuBarStyle = "pill"
+            }
+            prayerManager.updatePrayerLiveActivity()
+            if !hasCompletedOnboarding {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+                    showOnboarding = true
+                }
             }
         }
     }
@@ -107,6 +126,7 @@ struct ContentView: View {
 // MARK: - Custom Bottom Navigation Bar
 
 struct CustomBottomMenuBar: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding var selectedTab: Int
     let style: String
     @AppStorage("appAccentColor") private var appAccentColor: String = "emerald"
@@ -139,252 +159,37 @@ struct CustomBottomMenuBar: View {
                     }
                 } label: {
                     VStack(spacing: shouldShowLabels ? 3 : 0) {
-                        ZStack {
-                            if isSelected {
-                                switch menuBarIndicator {
-                                case "pill":
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(accent.opacity(0.18))
-                                        .frame(width: shouldShowLabels ? 38 : 42, height: shouldShowLabels ? 30 : 38)
-                                case "glow":
-                                    Circle()
-                                        .fill(accent.opacity(0.38))
-                                        .frame(width: 34, height: 34)
-                                        .blur(radius: 6)
-                                case "halo":
-                                    Circle()
-                                        .stroke(accent.opacity(0.85), lineWidth: 1.8)
-                                        .frame(width: 32, height: 32)
-                                case "badge":
-                                    Capsule()
-                                        .fill(accent.opacity(0.24))
-                                        .frame(width: shouldShowLabels ? 36 : 42, height: shouldShowLabels ? 28 : 36)
-                                default:
-                                    EmptyView()
-                                }
-                            }
-
-                            Image(systemName: item.icon)
-                                .font(.system(size: shouldShowLabels ? 16 : 19, weight: isSelected ? .semibold : .regular))
-                                .foregroundStyle(isSelected ? accent : Color.secondary)
-                        }
-                        .frame(height: shouldShowLabels ? 30 : 38)
+                        Image(systemName: item.icon)
+                            .font(.system(size: isSelected ? 18 : 16, weight: isSelected ? .bold : .medium))
+                            .foregroundStyle(isSelected ? accent : .secondary)
 
                         if shouldShowLabels {
                             Text(item.title)
                                 .font(.system(size: 10, weight: isSelected ? .bold : .medium))
-                                .foregroundStyle(isSelected ? accent : Color.secondary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-                        }
-
-                        if isSelected {
-                            if menuBarIndicator == "dot" {
-                                Circle()
-                                    .fill(accent)
-                                    .frame(width: 4.5, height: 4.5)
-                                    .shadow(color: accent.opacity(0.5), radius: 2)
-                                    .padding(.top, shouldShowLabels ? 1 : 2)
-                            } else if menuBarIndicator == "line" {
-                                Capsule()
-                                    .fill(accent)
-                                    .frame(width: 16, height: 2.5)
-                                    .shadow(color: accent.opacity(0.4), radius: 2)
-                                    .padding(.top, shouldShowLabels ? 1 : 2)
-                            }
-                        } else if menuBarIndicator == "dot" || menuBarIndicator == "line" {
-                            Color.clear
-                                .frame(height: shouldShowLabels ? 5.5 : 6.5)
+                                .foregroundStyle(isSelected ? accent : .secondary)
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .offset(y: style == "dock" && isSelected ? -5 : 0)
-                    .scaleEffect(style == "dock" && isSelected ? 1.12 : 1.0)
-                    .contentShape(Rectangle())
+                    .padding(.vertical, 8)
+                    .background(
+                        ZStack {
+                            if isSelected && menuBarIndicator == "pill" {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(accent.opacity(0.15))
+                            }
+                        }
+                    )
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(item.title)
             }
         }
-        .padding(.horizontal, style == "minimal" ? 4 : (style == "compact" ? 16 : 8))
-        .padding(.top, style == "compact" ? 8 : 10)
-        .padding(.bottom, bottomInnerPadding)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
         .background(
-            barBackgroundView
-        )
-        .padding(.horizontal, outerHorizontalPadding)
-        .padding(.bottom, outerBottomPadding)
-    }
-
-    private var bottomInnerPadding: CGFloat {
-        switch style {
-        case "floating", "glass", "arch", "aurora", "compact":
-            return 10
-        case "dock":
-            return 12
-        case "minimal":
-            return 28
-        default:
-            return 12
-        }
-    }
-
-    private var outerHorizontalPadding: CGFloat {
-        switch style {
-        case "floating", "glass", "aurora", "arch":
-            return 12
-        case "compact":
-            return 24
-        case "dock":
-            return 14
-        case "minimal":
-            return 0
-        default:
-            return 10
-        }
-    }
-
-    private var outerBottomPadding: CGFloat {
-        switch style {
-        case "floating", "compact", "dock", "aurora", "arch":
-            return 10
-        case "glass":
-            return 12
-        case "minimal":
-            return 0
-        default:
-            return 8
-        }
-    }
-
-    @ViewBuilder
-    private var barBackgroundView: some View {
-        switch style {
-        case "floating":
-            ZStack {
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                Capsule()
-                    .stroke(
-                        LinearGradient(
-                            colors: [accent.opacity(0.35), Color.primary.opacity(0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.2
-                    )
-            }
-            .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 4)
-
-        case "glass":
-            ZStack {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(accent.opacity(0.06))
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [accent.opacity(0.45), Color.white.opacity(0.2)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.2
-                    )
-            }
-            .shadow(color: accent.opacity(0.22), radius: 16, x: 0, y: 4)
-
-        case "arch":
-            ZStack {
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 26,
-                    bottomLeadingRadius: 18,
-                    bottomTrailingRadius: 18,
-                    topTrailingRadius: 26,
-                    style: .continuous
-                )
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)
-
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 26,
-                    bottomLeadingRadius: 18,
-                    bottomTrailingRadius: 18,
-                    topTrailingRadius: 26,
-                    style: .continuous
-                )
-                .stroke(
-                    LinearGradient(
-                        colors: [accent.opacity(0.55), Color(red: 0.88, green: 0.76, blue: 0.45).opacity(0.35)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 1.2
-                )
-            }
-            .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 4)
-
-        case "aurora":
-            ZStack {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(
-                        AngularGradient(
-                            colors: [accent, .cyan, .purple, .mint, accent],
-                            center: .center
-                        ).opacity(0.45),
-                        lineWidth: 1.4
-                    )
-            }
-            .shadow(color: accent.opacity(0.25), radius: 18, x: 0, y: 4)
-
-        case "minimal":
-            ZStack(alignment: .top) {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                Rectangle()
-                    .fill(Color.primary.opacity(0.08))
-                    .frame(height: 0.5)
-            }
-
-        case "dock":
-            ZStack {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(.regularMaterial)
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.22), Color.primary.opacity(0.08)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 1
-                    )
-            }
-            .shadow(color: Color.black.opacity(0.16), radius: 18, x: 0, y: 4)
-
-        case "compact":
-            ZStack {
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                Capsule()
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-            }
-            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 2)
-
-        default: // "pill"
-            ZStack {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-            }
-            .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: 3)
-        }
+                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
+        )
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
-}
-
-#Preview {
-    ContentView()
-        .environmentObject(PrayerManager())
 }

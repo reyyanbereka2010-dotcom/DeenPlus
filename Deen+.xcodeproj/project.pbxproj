@@ -7,14 +7,30 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3E749362E9664340ECA30281 /* PrayerTimes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8E26D82AD2AF45A8903DB1 /* PrayerTimes.swift */; };
+		3E0DDA1514D6DD4920907482 /* DeenWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8F1FE1E0269241AE8B091B /* DeenWidgetBundle.swift */; };
+		3E4EF7E92227704433A2F982 /* PrayerTimesWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EFEB3457B183D45C0B15952 /* PrayerTimesWidget.swift */; };
+		3E711C8FFB099645218FE479 /* AyahWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EACE24F6C731A48AE8E7072 /* AyahWidget.swift */; };
+		3EA1977FA8C88546F9A3DD22 /* PrayerLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E37D8D4A5DDDE4BAC87A1BF /* PrayerLiveActivityWidget.swift */; };
+		3EA8D185DD639A4A6F926D3E /* PrayerActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6874676085814507BC3A06 /* PrayerActivityAttributes.swift */; };
+		3ECF48B6A4E0BC4D71A6AA7D /* PrayTimes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E9FFDE2AC801E4ADF99DB87 /* PrayTimes.swift */; };
+		3EE1F1EE96A355496B94F5A4 /* DeenWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 3E0B527AA2B68F42BF8E7E8C /* DeenWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3EDBA02C30113A630042325D /* adhan.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA02B30113A630042325D /* adhan.caf */; };
 		3EDBA03C30113A630042325D /* adhan_takbeer.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA03B30113A630042325D /* adhan_takbeer.caf */; };
 		3EDBA04B3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA04A3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3E8E26D82AD2AF45A8903DB1 /* PrayerTimes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Deen+/PrayerTimes.swift"; sourceTree = "<group>"; };
+		3E0B527AA2B68F42BF8E7E8C /* DeenWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeenWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E8F1FE1E0269241AE8B091B /* DeenWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeenWidget/DeenWidgetBundle.swift; sourceTree = "<group>"; };
+		3EFEB3457B183D45C0B15952 /* PrayerTimesWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeenWidget/PrayerTimesWidget.swift; sourceTree = "<group>"; };
+		3EACE24F6C731A48AE8E7072 /* AyahWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeenWidget/AyahWidget.swift; sourceTree = "<group>"; };
+		3E37D8D4A5DDDE4BAC87A1BF /* PrayerLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Deen+/Views/PrayerLiveActivityWidget.swift"; sourceTree = "<group>"; };
+		3E6874676085814507BC3A06 /* PrayerActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Deen+/Models/PrayerActivityAttributes.swift"; sourceTree = "<group>"; };
+		3E9FFDE2AC801E4ADF99DB87 /* PrayTimes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Deen+/Managers/PrayTimes.swift"; sourceTree = "<group>"; };
 		3E134D73300D793500EAFBD4 /* Deen--Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Deen--Info.plist"; sourceTree = "<group>"; };
-		3E75040B3009DC0100875DDF /* Deen+.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Deen+.app"; path = Deen.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E75040B3009DC0100875DDF /* Deen.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Deen.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3EDBA02B30113A630042325D /* adhan.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan.caf; sourceTree = "<group>"; };
 		3EDBA03B30113A630042325D /* adhan_takbeer.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan_takbeer.caf; sourceTree = "<group>"; };
 		3EDBA04A3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "KFGQPC Uthmanic Script HAFS Regular.otf"; sourceTree = "<group>"; };
@@ -27,6 +43,38 @@
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXContainerItemProxy section */
+		3E1428124AE08245F7BAC945 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3E7504033009DC0100875DDF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3EE19779882F5D452DAACE3A;
+			remoteInfo = DeenWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		3E8BE8008FF275490BA1A10C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3EE19779882F5D452DAACE3A /* DeenWidget */;
+			targetProxy = 3E1428124AE08245F7BAC945 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3EC016A410302B4FD78E9849 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3EE1F1EE96A355496B94F5A4 /* DeenWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		3E7504083009DC0100875DDF /* Frameworks */ = {
@@ -50,7 +98,8 @@
 		3E75040C3009DC0100875DDF /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3E75040B3009DC0100875DDF /* Deen+.app */,
+				3E0B527AA2B68F42BF8E7E8C /* DeenWidget.appex */,
+				3E75040B3009DC0100875DDF /* Deen.app */,
 				3E134D73300D793500EAFBD4 /* Deen--Info.plist */,
 				3EDBA04A3011632B0042325D /* KFGQPC Uthmanic Script HAFS Regular.otf */,
 				3EDBA02B30113A630042325D /* adhan.caf */,
@@ -66,6 +115,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3E7504163009DC0200875DDF /* Build configuration list for PBXNativeTarget "Deen+" */;
 			buildPhases = (
+				3EC016A410302B4FD78E9849 /* Embed App Extensions */,
 				3E7504073009DC0100875DDF /* Sources */,
 				3E7504083009DC0100875DDF /* Frameworks */,
 				3E7504093009DC0100875DDF /* Resources */,
@@ -73,6 +123,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				3E8BE8008FF275490BA1A10C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3EDBA014300FE82C0042325D /* Deen+ */,
@@ -81,9 +132,28 @@
 			packageProductDependencies = (
 			);
 			productName = "Deen+";
-			productReference = 3E75040B3009DC0100875DDF /* Deen+.app */;
+			productReference = 3E75040B3009DC0100875DDF /* Deen.app */;
 			productType = "com.apple.product-type.application";
 		};
+
+		3EE19779882F5D452DAACE3A /* DeenWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3E58E1A0B4EDE74F5E9E2D2D /* Build configuration list for PBXNativeTarget "DeenWidget" */;
+			buildPhases = (
+				3E05D17170D9ED44F89AFA16 /* Sources */,
+				3E44B7FA52E65D4E79AFE8E1 /* Frameworks */,
+				3E9DE2713FACB0404EA83088 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DeenWidget;
+			productName = DeenWidget;
+			productReference = 3E0B527AA2B68F42BF8E7E8C /* DeenWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -92,9 +162,12 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2660;
-				LastUpgradeCheck = 2660;
+				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					3E75040A3009DC0100875DDF = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					3EE19779882F5D452DAACE3A = {
 						CreatedOnToolsVersion = 26.6;
 					};
 				};
@@ -113,6 +186,7 @@
 			projectRoot = "";
 			targets = (
 				3E75040A3009DC0100875DDF /* Deen+ */,
+				3EE19779882F5D452DAACE3A /* DeenWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -129,6 +203,36 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+		3E05D17170D9ED44F89AFA16 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3E0DDA1514D6DD4920907482 /* DeenWidgetBundle.swift in Sources */,
+				3E4EF7E92227704433A2F982 /* PrayerTimesWidget.swift in Sources */,
+				3E711C8FFB099645218FE479 /* AyahWidget.swift in Sources */,
+				3EA1977FA8C88546F9A3DD22 /* PrayerLiveActivityWidget.swift in Sources */,
+				3EA8D185DD639A4A6F926D3E /* PrayerActivityAttributes.swift in Sources */,
+				3ECF48B6A4E0BC4D71A6AA7D /* PrayTimes.swift in Sources */,
+				3E749362E9664340ECA30281 /* PrayerTimes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3E44B7FA52E65D4E79AFE8E1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3E9DE2713FACB0404EA83088 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
 
 /* Begin PBXSourcesBuildPhase section */
 		3E7504073009DC0100875DDF /* Sources */ = {
@@ -176,6 +280,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = D74384M94C;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -199,6 +304,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -239,6 +345,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = D74384M94C;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -255,6 +362,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -263,16 +371,17 @@
 		3E7504173009DC0200875DDF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconOriginal AppIconMidnight AppIconTeal AppIconNavy AppIconGold AppIconMonochrome AppIconCrimson";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
-				DEVELOPMENT_TEAM = D74384M94C;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Deen--Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Deen+";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Deen+ uses your location to calculate accurate prayer times and determine the Qibla direction.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -284,7 +393,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.9;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reyber.Deen;
 				PRODUCT_NAME = Deen;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -300,16 +409,17 @@
 		3E7504183009DC0200875DDF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconOriginal AppIconMidnight AppIconTeal AppIconNavy AppIconGold AppIconMonochrome AppIconCrimson";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
-				DEVELOPMENT_TEAM = D74384M94C;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Deen--Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Deen+";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Deen+ uses your location to calculate accurate prayer times and determine the Qibla direction.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -321,7 +431,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.9;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.reyber.Deen;
 				PRODUCT_NAME = Deen;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -335,6 +445,67 @@
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
+
+		3E1617C804C32347AF8D9570 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeenWidget/DeenWidget-Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Deen+ Widgets";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reyber.Deen.DeenWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3EEBA097C5A8854A9FA79D64 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeenWidget/DeenWidget-Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Deen+ Widgets";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reyber.Deen.DeenWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		3E58E1A0B4EDE74F5E9E2D2D /* Build configuration list for PBXNativeTarget "DeenWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3E1617C804C32347AF8D9570 /* Debug */,
+				3EEBA097C5A8854A9FA79D64 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+
 
 /* Begin XCConfigurationList section */
 		3E7504063009DC0100875DDF /* Build configuration list for PBXProject "Deen+" */ = {

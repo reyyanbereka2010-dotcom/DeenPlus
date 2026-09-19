@@ -1,6 +1,6 @@
 //
 //  QiblaView.swift
-//  MuslimPrayer
+//  Deen+
 //
 //  Created by Reyyan Bereka on 7/16/26.
 //
@@ -12,35 +12,67 @@ import UIKit
 #endif
 
 struct QiblaView: View {
-    
-    @State private var qiblaViewActive = false
-    @State private var hasVibrated = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject var qiblaManager: QiblaManager
     @EnvironmentObject var locationManager: LocationManager
-    @State private var hapticsEngine: CHHapticEngine?
+
+    @AppStorage("qiblaConfigMode") private var configMode: String = QiblaConfigurationMode.automatic.rawValue
+    @AppStorage("qiblaCompassStyle") private var compassStyle: String = QiblaCompassDialStyle.modern.rawValue
+    @AppStorage("qiblaNeedleStyle") private var needleStyle: String = QiblaNeedleStyle.kaaba.rawValue
+    @AppStorage("qiblaDistanceUnit") private var distanceUnit: String = QiblaAutoSettings.autoDistanceUnit().rawValue
+    @AppStorage("qiblaNorthReference") private var northReference: String = QiblaNorthReference.trueNorth.rawValue
+    @AppStorage("qiblaHapticEnabled") private var hapticEnabled: Bool = true
+    @AppStorage("qiblaHapticIntensity") private var hapticIntensity: String = QiblaHapticIntensity.crisp.rawValue
+    @AppStorage("qiblaShowLevelBubble") private var showLevelBubble: Bool = false
+    @AppStorage("qiblaAlignmentTolerance") private var alignmentTolerance: Double = 4.0
+
+    @AppStorage("appAccentColor") private var appAccentColor = "emerald"
+
+    @State private var qiblaViewActive = false
+    @State private var hasVibrated = false
+    @State private var showCustomizationSheet = false
     @State private var isRecalculating = false
-    @State private var wasRecentlyReset = false
-    @State private var calibrationSpin: Double = 0
-    
-    private func playQiblaReachedHaptic() {
-        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else { return }
-        do {
-            if hapticsEngine == nil {
-                hapticsEngine = try CHHapticEngine()
-                try hapticsEngine?.start()
-            }
-            let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.7)
-            let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
-            let event = CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0)
-            let pattern = try CHHapticPattern(events: [event], parameters: [])
-            let player = try hapticsEngine?.makePlayer(with: pattern)
-            try player?.start(atTime: 0)
-        } catch {
-            #if canImport(UIKit)
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.impactOccurred()
-            #endif
+
+    private var activeDialStyle: QiblaCompassDialStyle {
+        QiblaCompassDialStyle(rawValue: compassStyle) ?? .modern
+    }
+
+    private var activeNeedleStyle: QiblaNeedleStyle {
+        QiblaNeedleStyle(rawValue: needleStyle) ?? .kaaba
+    }
+
+    private var activeDistanceUnit: QiblaDistanceUnit {
+        if configMode == QiblaConfigurationMode.automatic.rawValue {
+            return QiblaAutoSettings.autoDistanceUnit()
         }
+        return QiblaDistanceUnit(rawValue: distanceUnit) ?? .kilometers
+    }
+
+    private var accent: Color {
+        AppAccentColor(rawValue: appAccentColor)?.color ?? .green
+    }
+
+    private var isAligned: Bool {
+        qiblaManager.isFacingQibla(tolerance: alignmentTolerance)
+    }
+
+    // MARK: - Haptic Feedback
+
+    private func playAlignmentHaptic() {
+        guard hapticEnabled else { return }
+        #if canImport(UIKit)
+        switch hapticIntensity {
+        case "subtle":
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred(intensity: 0.6)
+        case "strong":
+            let impact = UIImpactFeedbackGenerator(style: .heavy)
+            impact.impactOccurred(intensity: 1.0)
+        default:
+            let notify = UINotificationFeedbackGenerator()
+            notify.notificationOccurred(.success)
+        }
+        #endif
     }
 
     private func recalculateLocationAndQibla() {
@@ -48,30 +80,18 @@ struct QiblaView: View {
         let notify = UINotificationFeedbackGenerator()
         notify.notificationOccurred(.success)
         #endif
-        
+
         isRecalculating = true
-        wasRecentlyReset = true
-        
-        // Visually animate compass needle around in a dynamic calibration sweep
-        withAnimation(.spring(response: 0.75, dampingFraction: 0.65)) {
-            calibrationSpin += 360
-        }
-        
+
         locationManager.recalculateLocation()
-        
-        let lat = locationManager.latitude != 0 ? locationManager.latitude : 21.4225
-        let lon = locationManager.longitude != 0 ? locationManager.longitude : 39.8262
+
+        let lat = locationManager.latitude != 0 ? locationManager.latitude : QiblaManager.kaabaLatitude
+        let lon = locationManager.longitude != 0 ? locationManager.longitude : QiblaManager.kaabaLongitude
         qiblaManager.recalculateQibla(latitude: lat, longitude: lon)
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            withAnimation(.easeInOut(duration: 0.3)) {
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            withAnimation(.easeInOut(duration: 0.2)) {
                 isRecalculating = false
-            }
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                wasRecentlyReset = false
             }
         }
     }
@@ -81,230 +101,269 @@ struct QiblaView: View {
             ZStack {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
-                
+
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 28) {
-                        // Title Header with Reset / Recalculate
-                        HStack(alignment: .center) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Qibla Finder")
-                                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    VStack(spacing: 16) {
+                        // 1. Simple, High-Visibility Direction Guidance Banner (Fixed height to prevent vertical jitter)
+                        SimpleDirectionBanner(
+                            isAligned: isAligned,
+                            offset: qiblaManager.relativeOffsetToQibla,
+                            accentColor: accent
+                        )
+                        .padding(.horizontal, 18)
+                        .padding(.top, 4)
+
+                        // 2. Precision Interactive Compass Disc (Fixed center pivot, no up/down wobbling)
+                        VStack(spacing: 8) {
+                            QiblaCompassDiscView(
+                                qiblaManager: qiblaManager,
+                                dialStyle: activeDialStyle,
+                                needleStyle: activeNeedleStyle,
+                                showLevel: showLevelBubble,
+                                accentColor: accent
+                            )
+                            .padding(.vertical, 4)
+
+                            // Clean Forward Heading Readout
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text("\(Int(qiblaManager.heading.rounded()))°")
+                                    .font(.system(size: 34, weight: .light, design: .rounded))
                                     .foregroundStyle(.primary)
-                                
-                                Text("Point your phone towards the Kaaba")
-                                    .font(.subheadline)
+
+                                Text(qiblaManager.headingCardinalShort)
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.secondary)
                             }
-                            
-                            Spacer()
-                            
-                            Button {
-                                recalculateLocationAndQibla()
-                            } label: {
-                                HStack(spacing: 6) {
-                                    if wasRecentlyReset && !isRecalculating {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(.green)
-                                        Text("Calibrated")
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                    } else {
-                                        Image(systemName: "arrow.triangle.2.circlepath")
-                                            .rotationEffect(.degrees(isRecalculating ? 360 : 0))
-                                            .animation(isRecalculating ? .linear(duration: 0.8).repeatForever(autoreverses: false) : .default, value: isRecalculating)
-                                        Text(isRecalculating ? "Calibrating" : "Reset")
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                    }
+
+                            // Reserved Flat Guidance Row (Fixed height 22pt so layout NEVER jumps up and down)
+                            HStack(spacing: 6) {
+                                if !qiblaManager.isLevel {
+                                    Image(systemName: "iphone.gen1")
+                                        .font(.caption2)
+                                    Text("Hold phone flat for accurate direction")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
                                 }
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(wasRecentlyReset ? Color.green.opacity(0.18) : Color.green.opacity(0.12))
-                                .foregroundStyle(.green)
-                                .clipShape(Capsule())
                             }
-                            .disabled(isRecalculating)
-                            .accessibilityLabel("Recalculate Qibla and reset GPS location")
+                            .foregroundStyle(Color.orange)
+                            .frame(height: 22)
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 12)
-                        
-                        // Recalibrated Feedback Toast
-                        if wasRecentlyReset {
-                            HStack(spacing: 8) {
-                                Image(systemName: isRecalculating ? "sparkles" : "checkmark.circle.fill")
-                                    .font(.footnote)
-                                    .foregroundStyle(.green)
-                                Text(isRecalculating ? "Recalibrating GPS & Compass Sensors..." : "Compass & GPS Location Recalibrated ✓")
-                                    .font(.footnote)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(.primary)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(Capsule())
-                            .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        }
-                        
-                        // Main Compass Arrow Card
-                        VStack(spacing: 22) {
-                            ZStack {
-                                Circle()
-                                    .fill(qiblaManager.isFacingQibla ? Color.green.opacity(0.15) : Color.green.opacity(0.05))
-                                    .frame(width: 220, height: 220)
-                                
-                                Image(systemName: "location.north.fill")
-                                    .font(.system(size: 110, weight: .bold))
-                                    .rotationEffect(.degrees(qiblaManager.displayedRotation + calibrationSpin))
-                                    .foregroundStyle(qiblaManager.isFacingQibla ? .green : .primary)
-                                    .shadow(color: qiblaManager.isFacingQibla ? .green.opacity(0.4) : .black.opacity(0.1), radius: 10)
-                                    .animation(.spring(response: 0.4, dampingFraction: 0.7), value: qiblaManager.displayedRotation + calibrationSpin)
-                                    .accessibilityLabel(qiblaManager.isFacingQibla ? "Facing Qibla" : "Turn towards Qibla")
-                                    .accessibilityValue("Direction: \(Int(qiblaManager.qiblaDirection)) degrees")
-                            }
-                            .padding(.top, 10)
-                            
-                            VStack(spacing: 6) {
-                                Text("Qibla Angle")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .textCase(.uppercase)
-                                    .foregroundStyle(.secondary)
-                                
-                                Text("\(Int(round(qiblaManager.qiblaDirection)))°")
-                                    .font(.system(size: 42, weight: .bold, design: .rounded))
-                                    .foregroundStyle(qiblaManager.isFacingQibla ? .green : .primary)
-                            }
-                            
-                            // Facing Status Badge
-                            if qiblaManager.isFacingQibla {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.green)
-                                    Text("Facing Qibla")
-                                        .font(.headline)
-                                        .fontWeight(.bold)
-                                        .foregroundStyle(.green)
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 8)
-                                .background(Color.green.opacity(0.15))
-                                .clipShape(Capsule())
-                            } else {
-                                Text("Turn phone until the arrow turns green")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 6)
-                                    .background(Color(.tertiarySystemGroupedBackground))
-                                    .clipShape(Capsule())
-                            }
-                        }
-                        .padding(.vertical, 28)
-                        .padding(.horizontal, 24)
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .cornerRadius(24)
-                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
-                        .padding(.horizontal, 20)
-                        
-                        // Location Info Card
-                        VStack(spacing: 12) {
+
+                        // 3. Normal Person Friendly Information Cards (Simple, useful, zero confusing jargon)
+                        VStack(spacing: 10) {
+                            // Distance to Kaaba Card
                             HStack {
-                                Image(systemName: "location.fill")
-                                    .foregroundStyle(.green)
-                                Text("Your Location")
+                                Label("Distance to Kaaba", systemImage: "arrow.triangle.swap")
                                     .font(.headline)
-                                Spacer()
-                                if locationManager.latitude != 0 {
-                                    Text(locationManager.city)
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.primary)
-                                } else {
-                                    ProgressView()
-                                        .onAppear {
-                                            locationManager.requestLocation()
-                                        }
-                                }
-                            }
-                            
-                            Divider()
-                            
-                            HStack {
-                                Text("Status")
-                                    .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                 Spacer()
-                                if locationManager.authorizationStatus == .denied || locationManager.authorizationStatus == .restricted {
-                                    Text("Location Access Denied")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(.red)
-                                } else {
-                                    Text(locationManager.latitude != 0 ? "Location Detected ✓" : "Searching...")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(locationManager.latitude != 0 ? .green : .orange)
-                                }
+                                Text(qiblaManager.formattedDistanceToKaaba(
+                                    userLat: locationManager.latitude != 0 ? locationManager.latitude : QiblaManager.kaabaLatitude,
+                                    userLon: locationManager.longitude != 0 ? locationManager.longitude : QiblaManager.kaabaLongitude,
+                                    unit: activeDistanceUnit
+                                ))
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.primary)
                             }
+                            .padding()
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                            // Qibla Direction Bearing Card
+                            HStack {
+                                Label("Qibla Direction", systemImage: "safari.fill")
+                                    .font(.headline)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(String(format: "%.0f° %@", qiblaManager.qiblaDirection, qiblaManager.qiblaCardinalShort))
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.primary)
+                            }
+                            .padding()
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                            // Location Card
+                            HStack {
+                                Label("Current Location", systemImage: "location.fill")
+                                    .font(.headline)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(locationManager.city == "Unknown" ? "Locating..." : locationManager.city)
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.primary)
+                            }
+                            .padding()
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         }
-                        .padding(18)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .cornerRadius(18)
-                        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 80)
+                        .padding(.horizontal, 18)
                     }
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: horizontalSizeClass == .regular ? 580 : .infinity)
+                    .frame(maxWidth: .infinity)
                 }
             }
-            .navigationTitle("")
-            .navigationBarHidden(true)
-        }
-        .onChange(of: qiblaManager.isFacingQibla) { facing in
-            if facing && qiblaViewActive && !hasVibrated {
-                playQiblaReachedHaptic()
-                hasVibrated = true
+            .navigationTitle("Qibla")
+            .navigationBarTitleDisplayMode(.large)
+            .safeAreaPadding(.bottom, 60)
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    // Quick Compass Dial & Needle Chooser Menu
+                    Menu {
+                        Section("Compass Dial") {
+                            ForEach(QiblaCompassDialStyle.allCases) { style in
+                                Button {
+                                    compassStyle = style.rawValue
+                                } label: {
+                                    if compassStyle == style.rawValue {
+                                        Label(style.displayName, systemImage: "checkmark")
+                                    } else {
+                                        Label(style.displayName, systemImage: style.icon)
+                                    }
+                                }
+                            }
+                        }
+
+                        Section("Needle Pointer") {
+                            ForEach(QiblaNeedleStyle.allCases) { needle in
+                                Button {
+                                    needleStyle = needle.rawValue
+                                } label: {
+                                    if needleStyle == needle.rawValue {
+                                        Label(needle.displayName, systemImage: "checkmark")
+                                    } else {
+                                        Label(needle.displayName, systemImage: needle.icon)
+                                    }
+                                }
+                            }
+                        }
+
+                        Divider()
+
+                        Button {
+                            showCustomizationSheet = true
+                        } label: {
+                            Label("More Settings...", systemImage: "slider.horizontal.3")
+                        }
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                    .accessibilityLabel("Compass Options")
+
+                    Button {
+                        recalculateLocationAndQibla()
+                    } label: {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .rotationEffect(.degrees(isRecalculating ? 360 : 0))
+                            .animation(isRecalculating ? .linear(duration: 0.8).repeatForever(autoreverses: false) : .default, value: isRecalculating)
+                    }
+                    .disabled(isRecalculating)
+                    .accessibilityLabel("Recalibrate compass")
+                }
             }
-            if !facing {
+            .sheet(isPresented: $showCustomizationSheet) {
+                QiblaCustomizationSheet()
+            }
+            .onAppear {
+                qiblaViewActive = true
+                qiblaManager.startUpdatingHeading()
+                locationManager.requestLocation()
+                let lat = locationManager.latitude != 0 ? locationManager.latitude : QiblaManager.kaabaLatitude
+                let lon = locationManager.longitude != 0 ? locationManager.longitude : QiblaManager.kaabaLongitude
+                qiblaManager.recalculateQibla(latitude: lat, longitude: lon)
+            }
+            .onDisappear {
+                qiblaViewActive = false
                 hasVibrated = false
+                qiblaManager.stopUpdatingHeading()
             }
-        }
-        .onChange(of: locationManager.latitude) { newLat in
-            if newLat != 0 {
-                qiblaManager.calculateQibla(
-                    latitude: newLat,
-                    longitude: locationManager.longitude
-                )
+            .onChange(of: locationManager.latitude) { _, newLat in
+                if newLat != 0 {
+                    qiblaManager.calculateQibla(latitude: newLat, longitude: locationManager.longitude)
+                }
             }
-        }
-        .onAppear {
-            qiblaViewActive = true
-            qiblaManager.startUpdatingHeading()
-            if locationManager.latitude != 0 {
-                qiblaManager.calculateQibla(
-                    latitude: locationManager.latitude,
-                    longitude: locationManager.longitude
-                )
-            } else {
-                qiblaManager.calculateQibla(latitude: 21.4225, longitude: 39.8262)
+            .onChange(of: locationManager.longitude) { _, newLon in
+                if newLon != 0 {
+                    qiblaManager.calculateQibla(latitude: locationManager.latitude, longitude: newLon)
+                }
             }
-        }
-        .onDisappear {
-            qiblaViewActive = false
-            hasVibrated = false
-            qiblaManager.stopUpdatingHeading()
-            try? hapticsEngine?.stop()
-            hapticsEngine = nil
+            .onChange(of: isAligned) { _, aligned in
+                if aligned && !hasVibrated && qiblaViewActive {
+                    hasVibrated = true
+                    playAlignmentHaptic()
+                } else if !aligned {
+                    hasVibrated = false
+                }
+            }
         }
     }
 }
 
-#Preview {
-    QiblaView()
-        .environmentObject(QiblaManager())
-        .environmentObject(LocationManager())
+// MARK: - Simple Direction Banner (Locked Height - Never Jumps Up & Down)
+
+struct SimpleDirectionBanner: View {
+    let isAligned: Bool
+    let offset: Double
+    let accentColor: Color
+
+    private var degreesToTurn: Int {
+        Int(abs(offset).rounded())
+    }
+
+    private var isTurnRight: Bool {
+        offset > 0
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if isAligned {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.title2)
+                    .foregroundStyle(.green)
+
+                Text("Facing the Kaaba")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.green)
+
+                Spacer()
+
+                Image(systemName: "cube.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.green)
+            } else {
+                Image(systemName: isTurnRight ? "arrow.turn.up.right" : "arrow.turn.up.left")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundStyle(accentColor)
+
+                Text(isTurnRight ? "Turn \(degreesToTurn)° Right" : "Turn \(degreesToTurn)° Left")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Text("Align with Kaaba")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 52)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isAligned ? Color.green.opacity(0.14) : Color(.secondarySystemGroupedBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(isAligned ? Color.green.opacity(0.4) : Color.clear, lineWidth: 1.5)
+        )
+        .animation(.easeInOut(duration: 0.15), value: isAligned)
+    }
 }

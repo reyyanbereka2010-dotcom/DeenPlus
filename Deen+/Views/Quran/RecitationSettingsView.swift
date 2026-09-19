@@ -119,7 +119,7 @@ struct RecitationSettingsView: View {
                     .buttonStyle(.plain)
                 }
             } header: {
-                Label("Translation Voices", systemImage: "person.crop.circle.badge.waveform")
+                Label("Translation Voices", systemImage: "person.wave.2")
                     .foregroundStyle(.blue)
             }
 

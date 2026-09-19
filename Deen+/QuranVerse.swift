@@ -5,8 +5,7 @@
 
 import Foundation
 
-
-struct QuranVerse: Identifiable, Codable, Equatable {
+nonisolated struct QuranVerse: Identifiable, Codable, Equatable, Sendable {
 
     let id: Int
     let verseKey: String
@@ -39,18 +38,13 @@ struct QuranVerse: Identifiable, Codable, Equatable {
     }
 }
 
-
-
-
-struct QuranResponse: Codable {
+nonisolated struct QuranResponse: Codable, Sendable {
 
     let verses: [QuranAPIVerse]
 
 }
 
-
-
-struct QuranAPIVerse: Codable {
+nonisolated struct QuranAPIVerse: Codable, Sendable {
 
     let id: Int
     let verseKey: String
@@ -68,9 +62,7 @@ struct QuranAPIVerse: Codable {
 
 }
 
-
-
-struct Translation: Codable {
+nonisolated struct Translation: Codable, Sendable {
 
     let text: String
 

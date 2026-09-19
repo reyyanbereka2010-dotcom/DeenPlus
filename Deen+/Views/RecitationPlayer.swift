@@ -15,7 +15,7 @@ import UIKit
 
 // MARK: - Reciter and URL provider
 
-enum Reciter: String, CaseIterable, Identifiable, Sendable {
+nonisolated enum Reciter: String, CaseIterable, Identifiable, Sendable {
     case alafasy = "alafasy"
     case sudais = "sudais"
     case abdulbaset = "abdulbaset"
@@ -330,7 +330,7 @@ final class RecitationPlayer: ObservableObject {
             MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue
         ]
         if let currentItem = player?.currentItem {
-            let dur = currentItem.asset.duration.seconds
+            let dur = currentItem.duration.seconds
             if !dur.isNaN && dur > 0 {
                 info[MPMediaItemPropertyPlaybackDuration] = dur
                 info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentItem.currentTime().seconds
@@ -463,6 +463,12 @@ final class RecitationPlayer: ObservableObject {
         }
     }
 
+    func jumpToAyah(_ ayahNumber: Int) {
+        guard let surah = currentSurahId else { return }
+        let validAyah = max(1, min(ayahNumber, totalAyahsForCurrentSurah > 0 ? totalAyahsForCurrentSurah : 286))
+        playAyahInternal(surahId: surah, ayahNumber: validAyah, continuous: isContinuousPlayback, reciter: activeReciter)
+    }
+
     private func playAyahInternal(surahId: Int, ayahNumber: Int, continuous: Bool, reciter: Reciter? = nil) {
         let chosen = reciter ?? activeReciter
         let audioUrl: URL?
@@ -518,9 +524,15 @@ final class RecitationPlayer: ObservableObject {
         isPlaying = false
         isContinuousPlayback = false
         currentAyahNumber = nil
+        sleepTimerTask?.cancel()
+        sleepTimerTask = nil
+        sleepTimerRemainingMinutes = 0
         cleanupObservers()
         clearNowPlayingInfo()
         endAudioBackgroundTask()
+        #if canImport(AVFoundation)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        #endif
     }
 
     private func prepareSession() {
@@ -546,27 +558,35 @@ final class RecitationPlayer: ObservableObject {
             object: item,
             queue: .main
         ) { [weak self] _ in
-            guard let self = self else { return }
-            if self.repeatCount == 0 || self.currentAyahPlayCount < self.repeatCount {
-                self.currentAyahPlayCount += 1
-                self.player?.seek(to: .zero)
-                self.player?.playImmediately(atRate: self.playbackSpeed)
-                return
-            }
-            self.currentAyahPlayCount = 1
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                if self.repeatCount == 0 || self.currentAyahPlayCount < self.repeatCount {
+                    self.currentAyahPlayCount += 1
+                    self.player?.seek(to: .zero)
+                    self.player?.playImmediately(atRate: self.playbackSpeed)
+                    return
+                }
+                self.currentAyahPlayCount = 1
 
-            self.beginAudioBackgroundTask()
-            if self.isContinuousPlayback,
-               let surah = self.currentSurahId,
-               let currentAyah = self.currentAyahNumber {
-                if currentAyah < self.totalAyahsForCurrentSurah {
-                    let nextAyah = currentAyah + 1
-                    self.playAyahInternal(surahId: surah, ayahNumber: nextAyah, continuous: true, reciter: self.activeReciter)
-                } else if surah < 114 {
-                    // Seamlessly continue recitation to next Surah even when outside the app
-                    let nextSurah = surah + 1
-                    let nextTotal = SurahMetadata.get(nextSurah).totalAyahs
-                    self.playSurah(surahId: nextSurah, startAyah: 1, totalAyahs: nextTotal > 0 ? nextTotal : 286, reciter: self.activeReciter)
+                self.beginAudioBackgroundTask()
+                if self.isContinuousPlayback,
+                   let surah = self.currentSurahId,
+                   let currentAyah = self.currentAyahNumber {
+                    if currentAyah < self.totalAyahsForCurrentSurah {
+                        let nextAyah = currentAyah + 1
+                        self.playAyahInternal(surahId: surah, ayahNumber: nextAyah, continuous: true, reciter: self.activeReciter)
+                    } else if surah < 114 {
+                        // Seamlessly continue recitation to next Surah even when outside the app
+                        let nextSurah = surah + 1
+                        let nextTotal = SurahMetadata.get(nextSurah).totalAyahs
+                        self.playSurah(surahId: nextSurah, startAyah: 1, totalAyahs: nextTotal > 0 ? nextTotal : 286, reciter: self.activeReciter)
+                    } else {
+                        self.isPlaying = false
+                        self.isContinuousPlayback = false
+                        self.currentAyahNumber = nil
+                        self.clearNowPlayingInfo()
+                        self.endAudioBackgroundTask()
+                    }
                 } else {
                     self.isPlaying = false
                     self.isContinuousPlayback = false
@@ -574,12 +594,6 @@ final class RecitationPlayer: ObservableObject {
                     self.clearNowPlayingInfo()
                     self.endAudioBackgroundTask()
                 }
-            } else {
-                self.isPlaying = false
-                self.isContinuousPlayback = false
-                self.currentAyahNumber = nil
-                self.clearNowPlayingInfo()
-                self.endAudioBackgroundTask()
             }
         }
         errorObserver = NotificationCenter.default.addObserver(
@@ -587,12 +601,14 @@ final class RecitationPlayer: ObservableObject {
             object: item,
             queue: .main
         ) { [weak self] _ in
-            guard let self = self else { return }
-            self.isPlaying = false
-            self.isContinuousPlayback = false
-            self.currentAyahNumber = nil
-            self.clearNowPlayingInfo()
-            self.endAudioBackgroundTask()
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.isPlaying = false
+                self.isContinuousPlayback = false
+                self.currentAyahNumber = nil
+                self.clearNowPlayingInfo()
+                self.endAudioBackgroundTask()
+            }
         }
     }
 }

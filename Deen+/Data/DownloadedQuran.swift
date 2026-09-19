@@ -5,7 +5,7 @@
 
 import Foundation
 
-struct DownloadedQuran: Codable, Identifiable {
+nonisolated struct DownloadedQuran: Codable, Identifiable, Sendable {
 
     let id: Int
     let name: String

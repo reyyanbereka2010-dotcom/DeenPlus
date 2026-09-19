@@ -215,7 +215,7 @@ struct MonthlyCalendarView: View {
                             }
                         }
                     }
-                    .onChange(of: selectedMonthOffset) { newOffset in
+                    .onChange(of: selectedMonthOffset) { _, newOffset in
                         if newOffset == 0 {
                             let todayDay = calendar.component(.day, from: Date())
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {

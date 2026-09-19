@@ -18,6 +18,7 @@ struct SurahReaderView: View {
     let highlightVerse: Int?
     let resumeVerse: Int?
     
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var quranManager = QuranManager()
@@ -217,9 +218,11 @@ struct SurahReaderView: View {
                     }
                     .padding(.horizontal)
                     .padding(.bottom, recitationPlayer.currentSurahId == surah && recitationPlayer.currentAyahNumber != nil ? 110 : 80)
+                    .frame(maxWidth: horizontalSizeClass == .regular ? 720 : .infinity)
+                    .frame(maxWidth: .infinity)
                 }
                 .coordinateSpace(name: "scroll")
-                .onChange(of: quranManager.verses) { verses in
+                .onChange(of: quranManager.verses) { _, verses in
                     guard !verses.isEmpty, !hasFinishedInitialScroll else { return }
                     if let target = resumeVerse ?? highlightVerse, target > 0 {
                         scrollToTargetAyah(target, proxy: proxy)
@@ -243,7 +246,7 @@ struct SurahReaderView: View {
                         }
                     }
                 }
-                .onChange(of: recitationPlayer.currentAyahNumber) { newAyah in
+                .onChange(of: recitationPlayer.currentAyahNumber) { _, newAyah in
                     guard let newAyah = newAyah,
                           recitationPlayer.isPlaying,
                           recitationPlayer.currentSurahId == surah else { return }
@@ -252,127 +255,15 @@ struct SurahReaderView: View {
                     }
                 }
 
-                // Floating live recitation bar showing current Ayah being read by the Sheikh
-                if recitationPlayer.currentSurahId == surah, let activeAyah = recitationPlayer.currentAyahNumber {
-                    let totalCount = quranManager.verses.count > 0 ? quranManager.verses.count : SurahMetadata.get(surah).totalAyahs
-                    HStack(spacing: 14) {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.4)) {
-                                proxy.scrollTo(activeAyah, anchor: .center)
-                            }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "waveform")
-                                    .symbolEffect(.variableColor.iterative, options: .repeating)
-                                    .foregroundStyle(.green)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Ayah \(activeAyah) of \(totalCount)")
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(.primary)
-                                    Text(recitationPlayer.activeReciter.displayName)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Current Ayah \(activeAyah), tap to center")
-
-                        Spacer()
-
-                        Menu {
-                            Section("Playback Speed") {
-                                Button("0.75x") { recitationPlayer.setPlaybackSpeed(0.75) }
-                                Button("1.0x (Normal)") { recitationPlayer.setPlaybackSpeed(1.0) }
-                                Button("1.25x") { recitationPlayer.setPlaybackSpeed(1.25) }
-                                Button("1.5x") { recitationPlayer.setPlaybackSpeed(1.5) }
-                            }
-                            Section("Ayah Repeat") {
-                                Button("1x (Play Once)") { recitationPlayer.setRepeatCount(1) }
-                                Button("2x") { recitationPlayer.setRepeatCount(2) }
-                                Button("3x") { recitationPlayer.setRepeatCount(3) }
-                                Button("5x") { recitationPlayer.setRepeatCount(5) }
-                                Button("Loop Ayah (∞)") { recitationPlayer.setRepeatCount(0) }
-                            }
-                            Section("Sleep Timer") {
-                                Button("Off") { recitationPlayer.setSleepTimer(minutes: 0) }
-                                Button("15 Minutes") { recitationPlayer.setSleepTimer(minutes: 15) }
-                                Button("30 Minutes") { recitationPlayer.setSleepTimer(minutes: 30) }
-                                Button("45 Minutes") { recitationPlayer.setSleepTimer(minutes: 45) }
-                                Button("60 Minutes") { recitationPlayer.setSleepTimer(minutes: 60) }
-                            }
-                        } label: {
-                            HStack(spacing: 3) {
-                                Text(String(format: "%.2gx", recitationPlayer.playbackSpeed))
-                                    .font(.system(size: 10, weight: .bold))
-                                if recitationPlayer.repeatCount != 1 {
-                                    Text(recitationPlayer.repeatCount == 0 ? "∞" : "\(recitationPlayer.repeatCount)x")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(Color.green)
-                                }
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Color.primary.opacity(0.08), in: Capsule())
-                            .foregroundStyle(Color.primary)
-                        }
-
-                        HStack(spacing: 12) {
-                            Button {
-                                recitationPlayer.previousAyah()
-                            } label: {
-                                Image(systemName: "backward.fill")
-                                    .font(.subheadline)
-                                    .foregroundStyle(activeAyah > 1 ? Color.primary : Color.secondary.opacity(0.3))
-                            }
-                            .disabled(activeAyah <= 1)
-                            .accessibilityLabel("Previous ayah")
-
-                            Button {
-                                if recitationPlayer.isPlaying {
-                                    recitationPlayer.pause()
-                                } else {
-                                    recitationPlayer.resume()
-                                }
-                            } label: {
-                                Image(systemName: recitationPlayer.isPlaying ? "pause.fill" : "play.fill")
-                                    .font(.subheadline.weight(.bold))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 32, height: 32)
-                                    .background(Color.green, in: Circle())
-                            }
-                            .accessibilityLabel(recitationPlayer.isPlaying ? "Pause recitation" : "Resume recitation")
-
-                            Button {
-                                recitationPlayer.nextAyah()
-                            } label: {
-                                Image(systemName: "forward.fill")
-                                    .font(.subheadline)
-                                    .foregroundStyle(activeAyah < totalCount ? Color.primary : Color.secondary.opacity(0.3))
-                            }
-                            .disabled(activeAyah >= totalCount)
-                            .accessibilityLabel("Next ayah")
-
-                            Button {
-                                recitationPlayer.stop()
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            .accessibilityLabel("Stop recitation")
-                        }
+                // Modern Floating Now Playing Bar
+                QuranNowPlayingBar(onAyahTap: { activeAyah in
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        proxy.scrollTo(activeAyah, anchor: .center)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(.regularMaterial, in: Capsule())
-                    .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 4)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: recitationPlayer.currentAyahNumber)
-                }
+                })
+                .padding(.bottom, 8)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: recitationPlayer.currentAyahNumber)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -674,7 +565,7 @@ struct SurahReaderView: View {
                         Section("Preferences") {
                             Toggle("Show English Translation", isOn: $showTranslation)
                             Toggle("Keep Screen Awake", isOn: $keepScreenAwake)
-                                .onChange(of: keepScreenAwake) { enabled in
+                                .onChange(of: keepScreenAwake) { _, enabled in
                                     #if canImport(UIKit)
                                     UIApplication.shared.isIdleTimerDisabled = enabled
                                     #endif
@@ -696,35 +587,86 @@ struct SurahReaderView: View {
                 .presentationDetents([.fraction(0.65), .large])
             }
             .sheet(isPresented: $showJumpToAyah) {
-                VStack(spacing: 20) {
-                    Text("Jump to Ayah")
-                        .font(.headline)
-                    
-                    TextField("Ayah Number (1-\(quranManager.verses.count))", text: $targetAyahInput)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.roundedBorder)
-                        .padding(.horizontal)
-                    
-                    HStack(spacing: 16) {
-                        Button("Cancel") {
-                            targetAyahInput = ""
-                            showJumpToAyah = false
-                        }
-                        .buttonStyle(.bordered)
-                        
-                        Button("Go") {
-                            if let target = Int(targetAyahInput), target >= 1, target <= quranManager.verses.count {
-                                showJumpToAyah = false
-                                targetAyahInput = ""
-                                scrollToTargetAyah(target, proxy: proxy)
+                let total = max(quranManager.verses.count, SurahMetadata.get(surah).totalAyahs)
+                NavigationStack {
+                    VStack(spacing: 20) {
+                        // Quick Jump Shortcut Pills
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("QUICK JUMP")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.secondary)
+
+                            HStack(spacing: 8) {
+                                ForEach([
+                                    ("Start", 1),
+                                    ("1/4", max(1, total / 4)),
+                                    ("Half", max(1, total / 2)),
+                                    ("3/4", max(1, (3 * total) / 4)),
+                                    ("End", total)
+                                ], id: \.0) { label, ayahNum in
+                                    Button {
+                                        showJumpToAyah = false
+                                        targetAyahInput = ""
+                                        scrollToTargetAyah(ayahNum, proxy: proxy)
+                                    } label: {
+                                        VStack(spacing: 2) {
+                                            Text(label)
+                                                .font(.caption.weight(.semibold))
+                                            Text("v. \(ayahNum)")
+                                                .font(.system(size: 10, design: .rounded))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 8)
+                                        .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 10))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.green)
+                        .padding(.horizontal)
+
+                        // Manual Ayah Input
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("OR ENTER SPECIFIC AYAH (1–\(total))")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.secondary)
+
+                            HStack(spacing: 12) {
+                                TextField("Ayah number", text: $targetAyahInput)
+                                    .keyboardType(.numberPad)
+                                    .textFieldStyle(.roundedBorder)
+
+                                Button("Go") {
+                                    if let target = Int(targetAyahInput), target >= 1, target <= total {
+                                        showJumpToAyah = false
+                                        targetAyahInput = ""
+                                        scrollToTargetAyah(target, proxy: proxy)
+                                    }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.green)
+                                .disabled(Int(targetAyahInput) == nil || (Int(targetAyahInput) ?? 0) < 1 || (Int(targetAyahInput) ?? 0) > total)
+                            }
+                        }
+                        .padding(.horizontal)
+
+                        Spacer()
+                    }
+                    .padding(.top, 20)
+                    .navigationTitle("Jump to Ayah")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") {
+                                showJumpToAyah = false
+                                targetAyahInput = ""
+                            }
+                        }
                     }
                 }
-                .padding()
-                .presentationDetents([.fraction(0.3)])
+                .presentationDetents([.fraction(0.45), .medium])
+                .presentationDragIndicator(.visible)
             }
         }
     }

@@ -76,7 +76,7 @@ class NotificationManager {
             guard let self = self else { return }
 
             switch settings.authorizationStatus {
-            case .authorized, .provisional:
+            case .authorized, .provisional, .ephemeral:
                 self.scheduleTestRequest(delay: delay, completion: completion)
             case .notDetermined:
                 center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in

@@ -19,7 +19,7 @@ struct ScrollDetector: View {
             Color.clear
                 .onChange(
                     of: geo.frame(in: .global).minY
-                ) { newOffset in
+                ) { _, newOffset in
                     
                     let difference = newOffset - lastOffset
                     

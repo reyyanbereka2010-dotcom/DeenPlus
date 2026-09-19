@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import WidgetKit
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -67,6 +68,23 @@ class PrayerManager: ObservableObject {
     private let fallbackLat: Double = 21.4225
     private let fallbackLon: Double = 39.8262
 
+    private static let prayerFormatters: [DateFormatter] = {
+        let formats = ["h:mm a", "hh:mm a", "HH:mm", "H:mm", "HH:mm:ss"]
+        return formats.map { f in
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.dateFormat = f
+            return df
+        }
+    }()
+
+    private static let prayerDisplayFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.dateFormat = "h:mm a"
+        return df
+    }()
+
     init() {
         // Default auto-detect to true if not explicitly set
         let isAuto = UserDefaults.standard.object(forKey: autoDetectKey) as? Bool ?? true
@@ -116,6 +134,7 @@ class PrayerManager: ObservableObject {
         self.prayerTimes = initialTimes
 
         NotificationManager.shared.schedulePrayerNotifications(prayerTimes: initialTimes)
+        updatePrayerLiveActivity()
 
         #if canImport(UIKit)
         NotificationCenter.default.addObserver(
@@ -234,6 +253,7 @@ class PrayerManager: ObservableObject {
             self.isLoading = false
             self.saveCachedPrayerTimes(calculated, date: self.dateString(for: date), lat: lat, lon: lon)
             NotificationManager.shared.schedulePrayerNotifications(prayerTimes: calculated)
+            self.updatePrayerLiveActivity()
         }
 
         if Thread.isMainThread {
@@ -256,6 +276,84 @@ class PrayerManager: ObservableObject {
         } else {
             calculatePrayerTimes(date: Date(), latitude: latitude, longitude: longitude)
         }
+    }
+
+    // MARK: - Live Activity & Widget Helper
+
+    public func updatePrayerLiveActivity() {
+        let now = Date()
+        let rawPrayers: [(name: String, time: String, icon: String)] = [
+            ("Fajr", prayerTimes.fajr, "sunrise.fill"),
+            ("Dhuhr", prayerTimes.dhuhr, "sun.max.fill"),
+            ("Asr", prayerTimes.asr, "sun.max"),
+            ("Maghrib", prayerTimes.maghrib, "sunset.fill"),
+            ("Isha", prayerTimes.isha, "moon.stars.fill")
+        ]
+
+        var nextItem: (name: String, date: Date, timeStr: String, icon: String)? = nil
+
+        for p in rawPrayers {
+            if let date = parsePrayerDate(from: p.time, baseDate: now), date > now {
+                nextItem = (p.name, date, p.time, p.icon)
+                break
+            }
+        }
+
+        if nextItem == nil, let fajr = rawPrayers.first {
+            if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now),
+               let tomorrowFajr = parsePrayerDate(from: fajr.time, baseDate: tomorrow) {
+                nextItem = (fajr.name, tomorrowFajr, fajr.time, fajr.icon)
+            }
+        }
+
+        if let next = nextItem {
+            let city = UserDefaults.standard.string(forKey: "cached_location_city") ?? "Local Time"
+            let formattedDisplayTime: String
+            if let parsed = parseTimeObject(from: next.timeStr) {
+                formattedDisplayTime = Self.prayerDisplayFormatter.string(from: parsed)
+            } else {
+                formattedDisplayTime = next.timeStr
+            }
+
+            Task { @MainActor in
+                PrayerLiveActivityManager.shared.updateLiveActivity(
+                    nextPrayerName: next.name,
+                    nextPrayerDate: next.date,
+                    formattedTime: formattedDisplayTime,
+                    iconName: next.icon,
+                    locationName: city
+                )
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        }
+    }
+
+    private func parseTimeObject(from timeString: String) -> Date? {
+        let trimmed = timeString.trimmingCharacters(in: .whitespacesAndNewlines)
+        for formatter in Self.prayerFormatters {
+            if let date = formatter.date(from: trimmed) {
+                return date
+            }
+        }
+        let clean = trimmed.components(separatedBy: " ").first ?? trimmed
+        for formatter in Self.prayerFormatters {
+            if let date = formatter.date(from: clean) {
+                return date
+            }
+        }
+        return nil
+    }
+
+    private func parsePrayerDate(from timeString: String, baseDate: Date) -> Date? {
+        guard let parsedDate = parseTimeObject(from: timeString) else { return nil }
+
+        let cal = Calendar.current
+        var components = cal.dateComponents([.hour, .minute], from: parsedDate)
+        components.year = cal.component(.year, from: baseDate)
+        components.month = cal.component(.month, from: baseDate)
+        components.day = cal.component(.day, from: baseDate)
+        components.second = 0
+        return cal.date(from: components)
     }
 
     // MARK: - Caching Helpers

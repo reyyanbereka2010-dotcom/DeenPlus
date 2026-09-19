@@ -11,16 +11,17 @@ import UIKit
 #endif
 
 struct SettingsView: View {
-
     @EnvironmentObject var prayerManager: PrayerManager
     @ObservedObject private var translationNarrator = TranslationNarrator.shared
     @ObservedObject private var recitationPlayer = RecitationPlayer.shared
+    @ObservedObject private var iconManager = AppIconManager.shared
 
     @State private var downloadedCount = 0
     @State private var bookmarkCount = 0
 
     @State private var showClearDownloads = false
     @State private var showClearBookmarks = false
+    @State private var showOnboardingSheet = false
 
     // State for test notification
     @State private var isSendingTestNotification = false
@@ -28,119 +29,287 @@ struct SettingsView: View {
     @State private var testNotificationError: String? = nil
     @State private var showNotificationErrorAlert = false
 
-    @AppStorage("appTheme")
-    private var appTheme = "System"
-    @AppStorage("appAccentColor")
-    private var appAccentColor = "emerald"
-    @AppStorage("menuBarStyle")
-    private var menuBarStyle: String = "pill"
+    @AppStorage("appTheme") private var appTheme = "System"
+    @AppStorage("appAccentColor") private var appAccentColor = "emerald"
+    @AppStorage("menuBarStyle") private var menuBarStyle: String = "pill"
+    @AppStorage("prayerNotificationsEnabled") private var prayerNotificationsEnabled: Bool = false
+    @AppStorage("tasbih_haptic_feedback") private var tasbihHapticEnabled: Bool = true
+
+    @AppStorage("quranArabicFontSize") private var quranArabicFontSize: Double = 26
+    @AppStorage("quranTranslationFontSize") private var quranTranslationFontSize: Double = 16
+    @AppStorage("quranShowTranslation") private var quranShowTranslation: Bool = true
+    @AppStorage("quranReadingTheme") private var quranReadingTheme: String = "standard"
+    @AppStorage("quranKeepScreenAwake") private var quranKeepScreenAwake: Bool = true
+    @AppStorage("selectedQuranReciter") private var selectedQuranReciter: String = Reciter.alafasy.rawValue
 
     private var appVersionString: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.9"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "11"
         return "\(version) (\(build))"
     }
 
-    @AppStorage("prayerNotificationsEnabled")
-    private var prayerNotificationsEnabled: Bool = false
-
-    @AppStorage("tasbih_haptic_feedback")
-    private var tasbihHapticEnabled: Bool = true
-
-    @AppStorage("quranArabicFontSize")
-    private var quranArabicFontSize: Double = 26
-
-    @AppStorage("quranTranslationFontSize")
-    private var quranTranslationFontSize: Double = 16
-
-    @AppStorage("quranShowTranslation")
-    private var quranShowTranslation: Bool = true
-
-    @AppStorage("quranReadingTheme")
-    private var quranReadingTheme: String = "standard"
-
-    @AppStorage("quranKeepScreenAwake")
-    private var quranKeepScreenAwake: Bool = true
-
-    @AppStorage("selectedQuranReciter")
-    private var selectedQuranReciter: String = Reciter.alafasy.rawValue
+    private var accent: Color {
+        AppAccentColor(rawValue: appAccentColor)?.color ?? .green
+    }
 
     var body: some View {
         NavigationStack {
-            Form {
-                // Header Hero Brand Banner
+            List {
+                // MARK: - Profile / App Header Card
                 Section {
                     HStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.green.opacity(0.8), Color.teal],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 58, height: 58)
-                                .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 3)
-
-                            Image(systemName: "moon.stars.fill")
-                                .font(.system(size: 26))
-                                .foregroundStyle(.white)
-                        }
+                        // Current App Icon Preview
+                        AppIconPreviewBox(option: iconManager.selectedOption)
 
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 8) {
                                 Text("Deen+")
-                                    .font(.title2.bold())
+                                    .font(.title3)
+                                    .fontWeight(.bold)
                                     .foregroundStyle(.primary)
 
-                                Text("v1.1.9")
+                                Text(appVersionString)
                                     .font(.caption2.bold())
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(Color.green.opacity(0.14), in: Capsule())
-                                    .foregroundStyle(.green)
+                                    .background(accent.opacity(0.14), in: Capsule())
+                                    .foregroundStyle(accent)
                             }
 
-                            Text("Your Daily Islamic Companion & Quran Reader")
+                            Text("Private on device and not shared with third party companies")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 4)
                 }
 
-                // MARK: - Quran & Audio
-                Section {
+                // MARK: - Appearance & Customization
+                Section("Appearance & Icons") {
+                    NavigationLink {
+                        AppIconSelectionView()
+                    } label: {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "app.gift.fill", color: .indigo)
+                            Text("App Icon")
+                            Spacer()
+                            Text(iconManager.selectedOption.title)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    NavigationLink {
+                        AppearanceSettingsView()
+                    } label: {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "paintbrush.fill", color: .purple)
+                            Text("Theme & Styling")
+                        }
+                    }
+
+                    // Direct Accent Color Row
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "paintpalette.fill", color: .pink)
+                            Text("Accent Color")
+                        }
+
+                        HStack(spacing: 12) {
+                            ForEach(AppAccentColor.allCases) { item in
+                                Circle()
+                                    .fill(item.color)
+                                    .frame(width: 32, height: 32)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.primary, lineWidth: appAccentColor == item.rawValue ? 3 : 0)
+                                    )
+                                    .onTapGesture {
+                                        triggerSelectionHaptic()
+                                        appAccentColor = item.rawValue
+                                    }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .padding(.leading, 42)
+                    }
+
+                    Picker(selection: $appTheme) {
+                        Text("System").tag("System")
+                        Text("Light").tag("Light")
+                        Text("Dark").tag("Dark")
+                    } label: {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "circle.lefthalf.filled", color: .blue)
+                            Text("Color Scheme")
+                        }
+                    }
+
+                    Picker(selection: $menuBarStyle) {
+                        Text("Modern Pill").tag("pill")
+                        Text("Floating Capsule").tag("floating")
+                        Text("Frosted Glass").tag("glass")
+                        Text("Islamic Arch").tag("arch")
+                        Text("Aurora Glow").tag("aurora")
+                        Text("Elevated Dock").tag("dock")
+                        Text("Minimalist Bar").tag("minimal")
+                        Text("Compact Icons").tag("compact")
+                    } label: {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "dock.rectangle", color: .teal)
+                            Text("Menu Bar Style")
+                        }
+                    }
+                }
+
+                // MARK: - Prayers & Notifications
+                Section("Prayers & Calculations") {
+                    Toggle(isOn: $prayerNotificationsEnabled) {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "bell.fill", color: .red)
+                            Text("Prayer Notifications")
+                        }
+                    }
+                    .onChange(of: prayerNotificationsEnabled) { _, newValue in
+                        if newValue {
+                            NotificationManager.shared.requestPermission()
+                            NotificationManager.shared.schedulePrayerNotifications(prayerTimes: prayerManager.prayerTimes)
+                        } else {
+                            NotificationManager.shared.cancelPrayerNotifications()
+                        }
+                    }
+
+                    NavigationLink {
+                        NotificationSettingsView()
+                    } label: {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "speaker.wave.3.fill", color: .orange)
+                            Text("Adhan Sound & Alerts")
+                        }
+                    }
+
+                    Button {
+                        triggerTestNotification()
+                    } label: {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(
+                                icon: isSendingTestNotification ? "hourglass" : "bell.badge.waveform.fill",
+                                color: .green
+                            )
+
+                            Text(isSendingTestNotification ? "Scheduling Test in 3s..." : "Send Test Adhan Alert")
+                                .foregroundStyle(isSendingTestNotification ? Color.secondary : Color.primary)
+
+                            Spacer()
+
+                            if testNotificationScheduled {
+                                Text("Scheduled")
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.green.opacity(0.14), in: Capsule())
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                    }
+                    .disabled(isSendingTestNotification)
+
+                    Toggle(isOn: $prayerManager.autoDetectSettings) {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "location.fill", color: .blue)
+                            Text("Auto-Detect Coordinates")
+                        }
+                    }
+
+                    if prayerManager.autoDetectSettings {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "sun.max.fill", color: .orange)
+                            Text("Method")
+                            Spacer()
+                            Text(prayerManager.currentMethodDisplayName)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "calendar", color: .purple)
+                            Text("Asr School")
+                            Spacer()
+                            Text(prayerManager.juristicMethod.displayName)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Picker(selection: $prayerManager.calculationMethod) {
+                            ForEach(PrayTimes.availableMethodKeys, id: \.key) { item in
+                                Text(item.name).tag(item.key)
+                            }
+                        } label: {
+                            HStack(spacing: 14) {
+                                SettingsRowBadge(icon: "sun.max.fill", color: .orange)
+                                Text("Calculation Method")
+                            }
+                        }
+
+                        Picker(selection: $prayerManager.juristicMethod) {
+                            ForEach(PrayTimes.AdjustmentMethod.allCases) { method in
+                                Text(method.displayName).tag(method)
+                            }
+                        } label: {
+                            HStack(spacing: 14) {
+                                SettingsRowBadge(icon: "calendar", color: .purple)
+                                Text("Asr School")
+                            }
+                        }
+
+                        Picker(selection: $prayerManager.highLatsMethod) {
+                            ForEach(PrayTimes.ElavationMethod.allCases) { method in
+                                Text(method.displayName).tag(method)
+                            }
+                        } label: {
+                            HStack(spacing: 14) {
+                                SettingsRowBadge(icon: "globe.americas.fill", color: .blue)
+                                Text("High Latitude Rule")
+                            }
+                        }
+                    }
+                }
+
+                // MARK: - Holy Quran & Audio
+                Section("Holy Quran & Audio") {
                     NavigationLink {
                         RecitationSettingsView()
                     } label: {
-                        Label("Recitation & Voices", systemImage: "waveform.badge.mic")
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "waveform.and.mic", color: .green)
+                            Text("Recitation & Voices")
+                        }
                     }
-                    // Sheikh Selection
+
                     Picker(selection: $selectedQuranReciter) {
                         ForEach(Reciter.allCases) { reciter in
                             Text(reciter.displayName).tag(reciter.rawValue)
                         }
                     } label: {
-                        Label("Sheikh (Arabic)", systemImage: "person.wave.2.fill")
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "person.wave.2.fill", color: .teal)
+                            Text("Sheikh (Arabic)")
+                        }
                     }
-                    .onChange(of: selectedQuranReciter) { newRaw in
+                    .onChange(of: selectedQuranReciter) { _, newRaw in
                         if let rec = Reciter(rawValue: newRaw) {
                             recitationPlayer.setReciter(rec)
                         }
                     }
 
-                    // Translation Voice Selection
                     Picker(selection: $translationNarrator.activeVoice) {
                         ForEach(TranslationVoice.allCases) { voice in
                             Text(voice.displayName).tag(voice)
                         }
                     } label: {
-                        Label("Translation Voice", systemImage: "person.crop.circle.badge.waveform")
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "person.wave.2", color: .mint)
+                            Text("Translation Voice")
+                        }
                     }
 
-                    // Translation Voice Preview Button
                     Button {
                         if translationNarrator.isPlaying && translationNarrator.isPreviewing {
                             translationNarrator.stop()
@@ -148,15 +317,19 @@ struct SettingsView: View {
                             translationNarrator.preview(voice: translationNarrator.activeVoice)
                         }
                     } label: {
-                        HStack {
-                            Image(systemName: (translationNarrator.isPlaying && translationNarrator.isPreviewing) ? "stop.circle.fill" : "play.circle.fill")
-                                .foregroundStyle(.blue)
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(
+                                icon: (translationNarrator.isPlaying && translationNarrator.isPreviewing) ? "stop.circle.fill" : "play.circle.fill",
+                                color: .cyan
+                            )
                             Text((translationNarrator.isPlaying && translationNarrator.isPreviewing) ? "Stop Voice Sample" : "Sample \(translationNarrator.activeVoice.shortName)'s Voice")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.primary)
+
                             Spacer()
+
                             if translationNarrator.activeVoice.isStudioRecording {
-                                Text("Studio Recitation")
-                                    .font(.caption2.weight(.bold))
+                                Text("Studio")
+                                    .font(.caption2.bold())
                                     .foregroundStyle(.green)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -167,46 +340,65 @@ struct SettingsView: View {
 
                     // Arabic Font Size
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "textformat.size", color: .blue)
                             Text("Arabic Font Size")
                             Spacer()
                             Text("\(Int(quranArabicFontSize)) pt")
                                 .foregroundStyle(.secondary)
                         }
                         Slider(value: $quranArabicFontSize, in: 18...38, step: 2)
+                            .padding(.leading, 42)
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 2)
 
                     // English Translation Font Size
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "character.book.closed.fill", color: .indigo)
                             Text("Translation Font Size")
                             Spacer()
                             Text("\(Int(quranTranslationFontSize)) pt")
                                 .foregroundStyle(.secondary)
                         }
                         Slider(value: $quranTranslationFontSize, in: 13...24, step: 1)
+                            .padding(.leading, 42)
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 2)
 
-                    // Reading Theme
-                    Picker("Reader Theme", selection: $quranReadingTheme) {
+                    Picker(selection: $quranReadingTheme) {
                         ForEach(ReaderTheme.allCases) { theme in
                             Label(theme.displayName, systemImage: theme.icon).tag(theme.rawValue)
                         }
+                    } label: {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "book.pages.fill", color: .brown)
+                            Text("Reader Theme")
+                        }
                     }
 
-                    Toggle("Show English Translation", isOn: $quranShowTranslation)
-                    Toggle("Keep Screen Awake in Reader", isOn: $quranKeepScreenAwake)
+                    Toggle(isOn: $quranShowTranslation) {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "character.bubble.fill", color: .teal)
+                            Text("Show English Translation")
+                        }
+                    }
+
+                    Toggle(isOn: $quranKeepScreenAwake) {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "sun.max.circle.fill", color: .yellow)
+                            Text("Keep Screen Awake")
+                        }
+                    }
 
                     NavigationLink {
                         BookmarksView()
                     } label: {
-                        HStack {
-                            Label("Saved Bookmarks", systemImage: "bookmark.fill")
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "bookmark.fill", color: .blue)
+                            Text("Saved Bookmarks")
                             Spacer()
                             Text("\(bookmarkCount)")
-                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -214,186 +406,49 @@ struct SettingsView: View {
                     NavigationLink {
                         DownloadsView()
                     } label: {
-                        HStack {
-                            Label("Offline Downloads", systemImage: "arrow.down.circle.fill")
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "arrow.down.circle.fill", color: .green)
+                            Text("Offline Downloads")
                             Spacer()
                             Text("\(downloadedCount)")
-                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    SettingsIconLabel(title: "Holy Quran & Recitation", icon: "book.fill", color: .green)
-                } footer: {
-                    Text("Includes studio recordings by world-renowned Sheikhs and authentic Muslim translation audio including Ibrahim Walk.")
                 }
 
-                // MARK: - Prayer Notifications
-                Section {
-                    Toggle("Prayer Notifications", isOn: $prayerNotificationsEnabled)
-                        .onChange(of: prayerNotificationsEnabled) { newValue in
-                            if newValue {
-                                NotificationManager.shared.requestPermission()
-                                NotificationManager.shared.schedulePrayerNotifications(prayerTimes: prayerManager.prayerTimes)
-                            } else {
-                                NotificationManager.shared.cancelPrayerNotifications()
-                            }
-                        }
-
+                // MARK: - Tools & Utilities
+                Section("Tools & Utilities") {
                     NavigationLink {
-                        NotificationSettingsView()
+                        QiblaCustomizationSheet()
                     } label: {
-                        Label("Adhan Sound & Alerts", systemImage: "speaker.wave.3.fill")
-                    }
-
-                    Button {
-                        triggerTestNotification()
-                    } label: {
-                        HStack {
-                            Label(
-                                isSendingTestNotification ? "Scheduling Test in 3s..." : "Send Test Notification (3s)",
-                                systemImage: isSendingTestNotification ? "hourglass" : "bell.and.waveform.fill"
-                            )
-                            .foregroundStyle(isSendingTestNotification ? Color.secondary : Color.green)
-
-                            Spacer()
-
-                            if testNotificationScheduled {
-                                Text("Scheduled!")
-                                    .font(.caption2.bold())
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color.green.opacity(0.14), in: Capsule())
-                                    .foregroundStyle(.green)
-                            }
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "location.north.circle.fill", color: .blue)
+                            Text("Qibla Compass")
                         }
                     }
-                    .disabled(isSendingTestNotification)
-                } header: {
-                    SettingsIconLabel(title: "Prayer Notifications", icon: "bell.badge.fill", color: .red)
-                } footer: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        PrayerNotifSummaryFooter()
-                        if testNotificationScheduled {
-                            Text("Test alert will trigger in 3 seconds. Lock your phone or stay in the app to hear the Adhan.")
-                                .foregroundStyle(.green)
+
+                    Toggle(isOn: $tasbihHapticEnabled) {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "circle.grid.cross.fill", color: .purple)
+                            Text("Tasbih Tactile Feedback")
                         }
                     }
-                }
-
-                // MARK: - Prayer Calculation
-                Section {
-                    Toggle("Auto-Detect by Location", isOn: $prayerManager.autoDetectSettings)
-
-                    if prayerManager.autoDetectSettings {
-                        HStack {
-                            Text("Method")
-                            Spacer()
-                            Text(prayerManager.currentMethodDisplayName)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.trailing)
-                        }
-
-                        HStack {
-                            Text("Asr School")
-                            Spacer()
-                            Text(prayerManager.juristicMethod.displayName)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.trailing)
-                        }
-
-                        HStack {
-                            Text("High Latitude Rule")
-                            Spacer()
-                            Text(prayerManager.highLatsMethod.displayName)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.trailing)
-                        }
-                    } else {
-                        Picker("Calculation Method", selection: $prayerManager.calculationMethod) {
-                            ForEach(PrayTimes.availableMethodKeys, id: \.key) { item in
-                                Text(item.name).tag(item.key)
-                            }
-                        }
-
-                        Picker("Asr School", selection: $prayerManager.juristicMethod) {
-                            ForEach(PrayTimes.AdjustmentMethod.allCases) { method in
-                                Text(method.displayName).tag(method)
-                            }
-                        }
-
-                        Picker("High Latitude Rule", selection: $prayerManager.highLatsMethod) {
-                            ForEach(PrayTimes.ElavationMethod.allCases) { method in
-                                Text(method.displayName).tag(method)
-                            }
-                        }
-                    }
-                } header: {
-                    SettingsIconLabel(title: "Prayer Calculation", icon: "sun.max.fill", color: .orange)
-                } footer: {
-                    if prayerManager.autoDetectSettings {
-                        Text("Calculation method, Asr school, and high latitude rules are automatically optimized for your coordinates.")
-                    } else {
-                        Text("Calculated completely on-device using astronomical algorithms. Works anywhere without internet.")
-                    }
-                }
-
-                // MARK: - Tasbih Counter
-                Section {
-                    Toggle("Tactile Haptic Feedback", isOn: $tasbihHapticEnabled)
-                } header: {
-                    SettingsIconLabel(title: "Tasbih Counter", icon: "circle.grid.cross.fill", color: .indigo)
-                } footer: {
-                    Text("Provides a subtle physical pulse on each bead tap.")
-                }
-
-                // MARK: - Appearance
-                Section {
-                    NavigationLink {
-                        AppearanceSettingsView()
-                    } label: {
-                        Label("Theme & Appearance", systemImage: "paintbrush.fill")
-                    }
-                    Picker("Theme", selection: $appTheme) {
-                        Text("System").tag("System")
-                        Text("Light").tag("Light")
-                        Text("Dark").tag("Dark")
-                    }
-
-                    Picker("Menu Bar Style", selection: $menuBarStyle) {
-                        Text("Modern Pill").tag("pill")
-                        Text("Floating Capsule").tag("floating")
-                        Text("Frosted Glass").tag("glass")
-                        Text("Islamic Arch").tag("arch")
-                        Text("Aurora Glow").tag("aurora")
-                        Text("Elevated Dock").tag("dock")
-                        Text("Minimalist Bar").tag("minimal")
-                        Text("Compact Icons").tag("compact")
-                    }
-                } header: {
-                    SettingsIconLabel(title: "Appearance", icon: "paintbrush.fill", color: .purple)
                 }
 
                 // MARK: - Storage & Cache
-                Section {
-                    HStack {
-                        Label("Downloaded Surahs", systemImage: "internaldrive")
-                        Spacer()
-                        Text("\(downloadedCount) saved")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack {
-                        Label("Total Bookmarks", systemImage: "bookmark")
-                        Spacer()
-                        Text("\(bookmarkCount) items")
-                            .foregroundStyle(.secondary)
-                    }
-
+                Section("Storage & Cache") {
                     Button(role: .destructive) {
                         showClearDownloads = true
                     } label: {
-                        Label("Clear Downloaded Surahs", systemImage: "trash")
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "trash.fill", color: .red)
+                            Text("Clear Downloaded Surahs")
+                                .foregroundStyle(.red)
+                            Spacer()
+                            Text("\(downloadedCount) saved")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .confirmationDialog("Clear all downloads?", isPresented: $showClearDownloads, titleVisibility: .visible) {
                         Button("Delete All Downloads", role: .destructive) {
@@ -408,7 +463,15 @@ struct SettingsView: View {
                     Button(role: .destructive) {
                         showClearBookmarks = true
                     } label: {
-                        Label("Clear All Bookmarks", systemImage: "bookmark.slash")
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "bookmark.slash.fill", color: .orange)
+                            Text("Clear All Bookmarks")
+                                .foregroundStyle(.red)
+                            Spacer()
+                            Text("\(bookmarkCount) items")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .confirmationDialog("Clear all bookmarks?", isPresented: $showClearBookmarks, titleVisibility: .visible) {
                         Button("Delete All Bookmarks", role: .destructive) {
@@ -419,20 +482,34 @@ struct SettingsView: View {
                     } message: {
                         Text("This action cannot be undone.")
                     }
-                } header: {
-                    SettingsIconLabel(title: "Storage & Cache", icon: "internaldrive.fill", color: .teal)
                 }
 
-                // MARK: - About
-                Section {
-                    HStack {
+                // MARK: - About & Support
+                Section("About") {
+                    Button {
+                        showOnboardingSheet = true
+                    } label: {
+                        HStack(spacing: 14) {
+                            SettingsRowBadge(icon: "sparkles", color: .yellow)
+                            Text("Welcome Introduction")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+
+                    HStack(spacing: 14) {
+                        SettingsRowBadge(icon: "info.circle.fill", color: .gray)
                         Text("Version")
                         Spacer()
                         Text(appVersionString)
                             .foregroundStyle(.secondary)
                     }
 
-                    HStack {
+                    HStack(spacing: 14) {
+                        SettingsRowBadge(icon: "person.fill", color: .blue)
                         Text("Developer")
                         Spacer()
                         Text("Reyyan Bereka")
@@ -441,26 +518,25 @@ struct SettingsView: View {
 
                     if let url = URL(string: "https://github.com/reyyanbereka2010-dotcom/DeenPlus") {
                         Link(destination: url) {
-                            HStack {
-                                Label("Source Code & GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+                            HStack(spacing: 14) {
+                                SettingsRowBadge(icon: "chevron.left.forwardslash.chevron.right", color: .black)
+                                Text("Source Code (GitHub)")
+                                    .foregroundStyle(.primary)
                                 Spacer()
                                 Image(systemName: "arrow.up.right")
-                                    .font(.caption)
+                                    .font(.caption.bold())
                                     .foregroundStyle(.secondary)
                             }
                         }
                     }
-                } header: {
-                    SettingsIconLabel(title: "About & Community", icon: "info.circle.fill", color: .gray)
-                } footer: {
-                    Text("100% Private • On-Device Prayer Computations • No Ads • Free & Open Source")
-                        .font(.caption2)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 8)
                 }
             }
+            .listStyle(.insetGrouped)
             .navigationTitle("Settings")
             .safeAreaPadding(.bottom, 60)
+            .sheet(isPresented: $showOnboardingSheet) {
+                OnboardingSheetView(isPresented: $showOnboardingSheet)
+            }
             .onAppear {
                 if menuBarStyle == "standard" {
                     menuBarStyle = "pill"
@@ -477,6 +553,13 @@ struct SettingsView: View {
                 Text(testNotificationError ?? "Please enable notifications in iOS Settings.")
             }
         }
+    }
+
+    private func triggerSelectionHaptic() {
+        #if canImport(UIKit)
+        let impact = UIImpactFeedbackGenerator(style: .light)
+        impact.impactOccurred()
+        #endif
     }
 
     private func triggerTestNotification() {
@@ -515,45 +598,21 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Reusable Settings Icon Label
+// MARK: - Native iOS Settings Row Badge
 
-struct SettingsIconLabel: View {
-    let title: String
+struct SettingsRowBadge: View {
     let icon: String
     let color: Color
 
     var body: some View {
-        HStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(color.gradient)
-                    .frame(width: 22, height: 22)
+        ZStack {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(color.gradient)
+                .frame(width: 29, height: 29)
 
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-
-            Text(title)
-                .font(.subheadline.weight(.semibold))
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.white)
         }
-    }
-}
-
-// MARK: - Prayer Notification Summary Footer
-
-struct PrayerNotifSummaryFooter: View {
-    @AppStorage("prayerNotificationsEnabled") private var masterEnabled: Bool = false
-    @AppStorage("notif_fajr") private var fajr: Bool = true
-    @AppStorage("notif_dhuhr") private var dhuhr: Bool = true
-    @AppStorage("notif_asr") private var asr: Bool = true
-    @AppStorage("notif_maghrib") private var maghrib: Bool = true
-    @AppStorage("notif_isha") private var isha: Bool = true
-
-    var body: some View {
-        let enabledCount = [fajr, dhuhr, asr, maghrib, isha].filter { $0 }.count
-        Text(masterEnabled ? "Notifications active for \(enabledCount) of 5 daily prayers." : "Prayer notifications are currently disabled.")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
     }
 }

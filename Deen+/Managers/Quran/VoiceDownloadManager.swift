@@ -156,7 +156,7 @@ final class VoiceDownloadManager: ObservableObject {
                     }
                 }
 
-                if successAyahs > 0 {
+                if successAyahs == totalAyahs {
                     self.downloadedSurahKeys.insert("reciter_\(reciter.rawValue)_\(surahId)")
                 }
             }
@@ -210,7 +210,7 @@ final class VoiceDownloadManager: ObservableObject {
                     self.downloadProgress[key] = progress
                 }
             }
-            await self.finishDownload(key: key, success: successCount > 0)
+            await self.finishDownload(key: key, success: successCount == totalAyahs)
         }
     }
 
@@ -244,7 +244,7 @@ final class VoiceDownloadManager: ObservableObject {
                     self.downloadProgress[key] = progress
                 }
             }
-            await self.finishDownload(key: key, success: successCount > 0)
+            await self.finishDownload(key: key, success: successCount == totalAyahs)
         }
     }
 
@@ -283,7 +283,7 @@ final class VoiceDownloadManager: ObservableObject {
         var keys = Set<String>()
         var totalBytes: Int64 = 0
 
-        // Scan reciters
+        // Scan reciters: reciters/<reciterId>/<surahId>/*.mp3
         let recitersFolder = baseDownloadsFolder.appendingPathComponent("reciters", isDirectory: true)
         if let reciterDirs = try? fileManager.contentsOfDirectory(at: recitersFolder, includingPropertiesForKeys: nil) {
             for dir in reciterDirs {
@@ -305,18 +305,22 @@ final class VoiceDownloadManager: ObservableObject {
             }
         }
 
-        // Scan translations
+        // Scan translations: translations/<voiceId>/<surahId>/*.mp3
         let transFolder = baseDownloadsFolder.appendingPathComponent("translations", isDirectory: true)
-        if let transDirs = try? fileManager.contentsOfDirectory(at: transFolder, includingPropertiesForKeys: nil) {
-            for dir in transDirs {
+        if let voiceDirs = try? fileManager.contentsOfDirectory(at: transFolder, includingPropertiesForKeys: nil) {
+            for dir in voiceDirs {
                 let voiceId = dir.lastPathComponent
-                if let files = try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey]) {
-                    for file in files where file.pathExtension == "mp3" {
-                        let surahStr = file.deletingPathExtension().lastPathComponent
-                        keys.insert("translation_\(voiceId)_\(surahStr)")
-                        if let attrs = try? fileManager.attributesOfItem(atPath: file.path),
-                           let size = attrs[.size] as? Int64 {
-                            totalBytes += size
+                if let surahDirs = try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) {
+                    for surahDir in surahDirs {
+                        let surahStr = surahDir.lastPathComponent
+                        if let files = try? fileManager.contentsOfDirectory(at: surahDir, includingPropertiesForKeys: [.fileSizeKey]), !files.isEmpty {
+                            keys.insert("translation_\(voiceId)_\(surahStr)")
+                            for file in files {
+                                if let attrs = try? fileManager.attributesOfItem(atPath: file.path),
+                                   let size = attrs[.size] as? Int64 {
+                                    totalBytes += size
+                                }
+                            }
                         }
                     }
                 }

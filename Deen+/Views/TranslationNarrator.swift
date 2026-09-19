@@ -11,7 +11,7 @@ import AVFoundation
 
 // MARK: - Available Muslim Translation Voices / Narrators
 
-enum TranslationVoice: String, CaseIterable, Identifiable, Sendable {
+nonisolated enum TranslationVoice: String, CaseIterable, Identifiable, Sendable {
     case ibrahimWalk = "ibrahim_walk"
     case shamshadAliKhan = "shamshad_ali_khan"
     case farhatHashmi = "farhat_hashmi"
@@ -116,6 +116,7 @@ final class TranslationNarrator: NSObject, ObservableObject {
 
     private var player: AVPlayer?
     private var playerDidFinishObserver: Any?
+    private var playerDidFailObserver: Any?
 
     override private init() {
         super.init()
@@ -149,7 +150,7 @@ final class TranslationNarrator: NSObject, ObservableObject {
         RecitationPlayer.shared.pause()
 
         let audioUrl: URL?
-        if let local = VoiceDownloadManager.shared.localTranslationAudioURL(voice: activeVoice, surahId: surah) {
+        if let local = VoiceDownloadManager.shared.localTranslationAudioURL(voice: activeVoice, surahId: surah, ayahNumber: ayah) {
             audioUrl = local
         } else {
             audioUrl = activeVoice.audioUrl(surah: surah, ayah: ayah)
@@ -189,6 +190,10 @@ final class TranslationNarrator: NSObject, ObservableObject {
             NotificationCenter.default.removeObserver(observer)
             playerDidFinishObserver = nil
         }
+        if let observer = playerDidFailObserver {
+            NotificationCenter.default.removeObserver(observer)
+            playerDidFailObserver = nil
+        }
 
         player?.pause()
         player = nil
@@ -198,6 +203,10 @@ final class TranslationNarrator: NSObject, ObservableObject {
         currentSurahId = nil
         currentAyahNumber = nil
         isPreviewing = false
+
+        #if canImport(AVFoundation)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        #endif
     }
 
     func setVoice(_ voice: TranslationVoice) {
@@ -227,7 +236,19 @@ final class TranslationNarrator: NSObject, ObservableObject {
             object: playerItem,
             queue: .main
         ) { [weak self] _ in
-            self?.stop()
+            Task { @MainActor [weak self] in
+                self?.stop()
+            }
+        }
+
+        playerDidFailObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemFailedToPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.stop()
+            }
         }
 
         player?.play()

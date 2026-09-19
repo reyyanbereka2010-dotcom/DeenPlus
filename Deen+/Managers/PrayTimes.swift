@@ -721,7 +721,7 @@ class PrayTimes {
     static func getJulian(for date: Date) -> Double {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
-        var components = calendar.dateComponents([.year, .month, .day], from: date)
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
 
         var year = components.year ?? 2026
         var month = components.month ?? 1
