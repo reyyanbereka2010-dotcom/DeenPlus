@@ -37,29 +37,6 @@ A offline iOS Islamic prayer app made with SwiftUI.
 
 ---
 
-## Project Structure
-
-```text
-Deen+/
-├── Deen+/
-│   ├── Data/              # Surah models, names, and metadata
-│   ├── Managers/          # Business logic (Prayer, Quran, Location, Qibla, Notifications)
-│   │   ├── PrayerManager.swift
-│   │   ├── PrayTimes.swift
-│   │   ├── PrayerAutoSettings.swift
-│   │   ├── LocationManager.swift
-│   │   └── ...
-│   ├── Models/            # Data models
-│   ├── Views/             # SwiftUI views (Home, Quran, PrayerTimes, Qibla, Tasbih, Settings)
-│   └── Assets.xcassets    # App icons, colors, and graphics
-├── Deen+.xcodeproj        # Xcode project configuration
-├── adhan.caf              # Adhan audio asset
-├── KFGQPC Uthmanic...otf  # Uthmanic Arabic font
-└── README.md
-```
-
----
-
 ## Getting Started
 
 **Method 1**
