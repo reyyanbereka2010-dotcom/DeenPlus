@@ -55,8 +55,9 @@ A offline iOS Islamic prayer app made with SwiftUI.
 **Method 2** (need a PC if on iOS 26-26.6.1)
 1. download ipa from [releases](https://github.com/reyyanbereka2010-dotcom/DeenPlus/releases)
 2. sideload using [this](https://docs.sidestore.io/docs/installation/install) guide
+!!! FOR IOS 27+ USE SIDEINSTALLER (but not really reliable) so do method 3 instead
 
-**Method 3**
+**Method 3** **(RECOMMENDED)**
 1. install Testflight from App store
 2. click [this](https://testflight.apple.com/join/6vMXUXMy) link
 3. done!
