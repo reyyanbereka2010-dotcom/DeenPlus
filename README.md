@@ -1,4 +1,4 @@
-
+[https:testflight.apple.comjoin6vMXUX.txt](https://github.com/user-attachments/files/32408303/https.testflight.apple.comjoin6vMXUX.txt)
 <img src="https://github.com/user-attachments/assets/8d1d13d5-f0eb-4949-93fc-bfcf7cbbaf53" alt="Deen+ App Icon" width="120" height="120" align="right" style="border: none; border-style: none; box-shadow: none; display: block; background: transparent;">
 
 <h1 style="border-bottom: none; margin-top: 0;">Deen+</h1>
@@ -58,7 +58,7 @@ A offline iOS Islamic prayer app made with SwiftUI.
 
 **Method 3**
 1. install Testflight from App store
-2. click this link
+2. click [this](https://testflight.apple.com/join/6vMXUXMy) link
 3. done!
 
 ---
