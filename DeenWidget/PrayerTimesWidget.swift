@@ -74,46 +74,60 @@ struct PrayerTimesTimelineProvider: TimelineProvider {
             ("Isha", times.isha, "moon.stars.fill")
         ]
 
-        var nextName = "Fajr"
-        var nextDate = date.addingTimeInterval(3600)
-        var nextFormatted = formatTo12Hour(times.fajr)
-        var nextIcon = "sunrise.fill"
-        var foundNext = false
+        struct ParsedPrayer {
+            let name: String
+            let date: Date
+            let time12H: String
+            let icon: String
+        }
 
+        var parsedPrayers: [ParsedPrayer] = []
         for p in rawPrayers {
-            if let pDate = parsePrayerDate(from: p.timeStr, baseDate: date), pDate > date {
-                nextName = p.name
-                nextDate = pDate
-                nextFormatted = formatTo12Hour(p.timeStr)
-                nextIcon = p.icon
-                foundNext = true
+            if let pDate = parsePrayerDate(from: p.timeStr, baseDate: date) {
+                let time12H = formatTo12Hour(date: pDate)
+                parsedPrayers.append(ParsedPrayer(name: p.name, date: pDate, time12H: time12H, icon: p.icon))
+            }
+        }
+
+        var nextItem: ParsedPrayer? = nil
+
+        // Find the first prayer today whose parsed date is strictly in the future
+        for p in parsedPrayers {
+            if p.date > date {
+                nextItem = p
                 break
             }
         }
 
-        // If all prayers today have passed, next prayer is tomorrow's Fajr
-        if !foundNext {
+        // If all prayers today have passed, calculate tomorrow's Fajr
+        if nextItem == nil {
             if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: date) {
                 let tomorrowTimes = pt.calculate(for: [activeLat, activeLng], date: tomorrow)
                 if let tomorrowFajrDate = parsePrayerDate(from: tomorrowTimes.fajr, baseDate: tomorrow) {
-                    nextName = "Fajr"
-                    nextDate = tomorrowFajrDate
-                    nextFormatted = formatTo12Hour(tomorrowTimes.fajr)
-                    nextIcon = "sunrise.fill"
+                    let time12H = formatTo12Hour(date: tomorrowFajrDate)
+                    nextItem = ParsedPrayer(name: "Fajr", date: tomorrowFajrDate, time12H: time12H, icon: "sunrise.fill")
                 }
             }
         }
 
-        let dailyList = rawPrayers.map { item in
-            (name: item.name, time: formatTo12Hour(item.timeStr), isNext: item.name == nextName)
+        let fallbackTime = parsedPrayers.first?.time12H ?? "5:30 AM"
+        let finalNext = nextItem ?? ParsedPrayer(
+            name: "Fajr",
+            date: date.addingTimeInterval(3600),
+            time12H: fallbackTime,
+            icon: "sunrise.fill"
+        )
+
+        let dailyList = parsedPrayers.map { p in
+            (name: p.name, time: p.time12H, isNext: p.name == finalNext.name)
         }
 
         return PrayerEntry(
             date: date,
-            nextPrayerName: nextName,
-            nextPrayerDate: nextDate,
-            formattedTime: nextFormatted,
-            iconName: nextIcon,
+            nextPrayerName: finalNext.name,
+            nextPrayerDate: finalNext.date,
+            formattedTime: finalNext.time12H,
+            iconName: finalNext.icon,
             locationName: city,
             dailyPrayers: dailyList
         )
@@ -121,39 +135,39 @@ struct PrayerTimesTimelineProvider: TimelineProvider {
 
     private func parsePrayerDate(from timeStr: String, baseDate: Date) -> Date? {
         let trimmed = timeStr.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cal = Calendar.current
-        let formats = ["HH:mm", "H:mm", "h:mm a", "hh:mm a", "h:mm", "hh:mm"]
-        for fmt in formats {
-            let df = DateFormatter()
-            df.locale = Locale(identifier: "en_US_POSIX")
-            df.dateFormat = fmt
-            if let parsed = df.date(from: trimmed) {
-                var comp = cal.dateComponents([.hour, .minute], from: parsed)
-                comp.year = cal.component(.year, from: baseDate)
-                comp.month = cal.component(.month, from: baseDate)
-                comp.day = cal.component(.day, from: baseDate)
-                comp.second = 0
-                return cal.date(from: comp)
-            }
+        let isPM = trimmed.lowercased().contains("pm")
+        let isAM = trimmed.lowercased().contains("am")
+
+        let clean = trimmed.replacingOccurrences(of: "AM", with: "", options: .caseInsensitive)
+                           .replacingOccurrences(of: "PM", with: "", options: .caseInsensitive)
+                           .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let components = clean.components(separatedBy: ":")
+        guard components.count >= 2,
+              var hour = Int(components[0].trimmingCharacters(in: .whitespaces)),
+              let minute = Int(components[1].trimmingCharacters(in: .whitespaces)) else {
+            return nil
         }
-        return nil
+
+        if isPM && hour < 12 {
+            hour += 12
+        } else if isAM && hour == 12 {
+            hour = 0
+        }
+
+        let cal = Calendar.current
+        var comp = cal.dateComponents([.year, .month, .day], from: baseDate)
+        comp.hour = hour
+        comp.minute = minute
+        comp.second = 0
+        return cal.date(from: comp)
     }
 
-    private func formatTo12Hour(_ timeStr: String) -> String {
-        let trimmed = timeStr.trimmingCharacters(in: .whitespacesAndNewlines)
-        let formats = ["HH:mm", "H:mm", "h:mm a", "hh:mm a", "h:mm", "hh:mm"]
-        for fmt in formats {
-            let df = DateFormatter()
-            df.locale = Locale(identifier: "en_US_POSIX")
-            df.dateFormat = fmt
-            if let parsed = df.date(from: trimmed) {
-                let outFormatter = DateFormatter()
-                outFormatter.locale = Locale(identifier: "en_US_POSIX")
-                outFormatter.dateFormat = "h:mm a"
-                return outFormatter.string(from: parsed)
-            }
-        }
-        return trimmed
+    private func formatTo12Hour(date: Date) -> String {
+        let outFormatter = DateFormatter()
+        outFormatter.locale = Locale(identifier: "en_US_POSIX")
+        outFormatter.dateFormat = "h:mm a"
+        return outFormatter.string(from: date)
     }
 }
 
