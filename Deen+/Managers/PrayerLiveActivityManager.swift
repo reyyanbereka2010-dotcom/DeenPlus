@@ -6,30 +6,21 @@
 //
 
 import Foundation
-import ActivityKit
 import Combine
-import os
+import ActivityKit
+import OSLog
 
 @MainActor
-public class PrayerLiveActivityManager: ObservableObject {
+public final class PrayerLiveActivityManager: ObservableObject {
     public static let shared = PrayerLiveActivityManager()
-
-    private let logger = Logger(subsystem: "com.reyber.Deen", category: "LiveActivity")
 
     @Published public private(set) var isActivityActive = false
 
-    private init() {
-        checkActiveActivities()
-    }
+    private let logger = Logger(subsystem: "com.reyber.Deen", category: "PrayerLiveActivityManager")
 
-    public func checkActiveActivities() {
-        if #available(iOS 16.1, *) {
-            isActivityActive = !Activity<PrayerActivityAttributes>.activities.isEmpty
-            logger.info("Active activities count: \(Activity<PrayerActivityAttributes>.activities.count)")
-        }
-    }
+    private init() {}
 
-    /// Starts or updates a Live Activity for the next upcoming prayer
+    /// Starts or updates the active prayer Live Activity with the upcoming prayer details.
     public func updateLiveActivity(
         nextPrayerName: String,
         nextPrayerDate: Date,
@@ -37,11 +28,6 @@ public class PrayerLiveActivityManager: ObservableObject {
         iconName: String,
         locationName: String
     ) {
-        logger.info("updateLiveActivity called with: \(nextPrayerName), \(formattedTime), date: \(nextPrayerDate)")
-
-        let areEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
-        logger.info("areActivitiesEnabled: \(areEnabled)")
-
         let contentState = PrayerActivityAttributes.ContentState(
             nextPrayerName: nextPrayerName,
             nextPrayerDate: nextPrayerDate,
@@ -59,8 +45,8 @@ public class PrayerLiveActivityManager: ObservableObject {
                 Task {
                     let activityContent = ActivityContent(state: contentState, staleDate: nextPrayerDate)
                     await existingActivity.update(activityContent)
-                    await MainActor.run { self.isActivityActive = true }
-                    logger.info("Updated existing activity \(existingActivity.id)")
+                    self.isActivityActive = true
+                    self.logger.info("Updated existing activity \(existingActivity.id)")
                 }
             } else {
                 do {
