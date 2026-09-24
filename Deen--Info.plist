@@ -7,8 +7,6 @@
 		<string>com.deenplus.refreshPrayers</string>
 		<string>com.deenplus.syncDuas</string>
 	</array>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>KFGQPC Uthmanic Script HAFS Regular.otf</string>

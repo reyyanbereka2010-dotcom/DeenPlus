@@ -4,7 +4,7 @@ set -e
 echo "🔨 Building Deen+ for your device..."
 xcodebuild -project "Deen+.xcodeproj" -scheme "Deen+" -destination "generic/platform=iOS" build -quiet
 
-APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/Deen+-* -name "Deen.app" -path "*/Debug-iphoneos/*" | head -n 1)
+APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/Deen+-* -name "Deen.app" -path "*/Build/Products/Debug-iphoneos/*" | grep -v "Index.noindex" | head -n 1)
 
 if [ -z "$APP_PATH" ]; then
     echo "❌ Could not locate built Deen.app"
