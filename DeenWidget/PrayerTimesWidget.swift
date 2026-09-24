@@ -51,8 +51,20 @@ struct PrayerTimesTimelineProvider: TimelineProvider {
         let activeLng = lng != 0 ? lng : 39.8262
         let city = userDefaults.string(forKey: "cached_location_city") ?? "Local Time"
 
+        let entry = makeEntry(for: now, activeLat: activeLat, activeLng: activeLng, city: city)
+
+        // Schedule next refresh right after the next prayer starts, or at most in 15 minutes
+        let nextUpdate = entry.nextPrayerDate > now
+            ? min(entry.nextPrayerDate.addingTimeInterval(10), now.addingTimeInterval(900))
+            : now.addingTimeInterval(900)
+
+        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+        completion(timeline)
+    }
+
+    private func makeEntry(for date: Date, activeLat: Double, activeLng: Double, city: String) -> PrayerEntry {
         let pt = PrayTimes()
-        let times = pt.calculate(for: [activeLat, activeLng], date: now)
+        let times = pt.calculate(for: [activeLat, activeLng], date: date)
 
         let rawPrayers: [(name: String, timeStr: String, icon: String)] = [
             ("Fajr", times.fajr, "sunrise.fill"),
@@ -63,37 +75,41 @@ struct PrayerTimesTimelineProvider: TimelineProvider {
         ]
 
         var nextName = "Fajr"
-        var nextDate = now.addingTimeInterval(3600)
-        var nextFormatted = times.fajr
+        var nextDate = date.addingTimeInterval(3600)
+        var nextFormatted = formatTo12Hour(times.fajr)
         var nextIcon = "sunrise.fill"
-
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        var foundNext = false
 
         for p in rawPrayers {
-            formatter.dateFormat = "HH:mm"
-            if let parsed = formatter.date(from: p.timeStr.trimmingCharacters(in: .whitespacesAndNewlines)) {
-                let cal = Calendar.current
-                var comp = cal.dateComponents([.hour, .minute], from: parsed)
-                comp.year = cal.component(.year, from: now)
-                comp.month = cal.component(.month, from: now)
-                comp.day = cal.component(.day, from: now)
-                if let pDate = cal.date(from: comp), pDate > now {
-                    nextName = p.name
-                    nextDate = pDate
-                    nextFormatted = p.timeStr
-                    nextIcon = p.icon
-                    break
+            if let pDate = parsePrayerDate(from: p.timeStr, baseDate: date), pDate > date {
+                nextName = p.name
+                nextDate = pDate
+                nextFormatted = formatTo12Hour(p.timeStr)
+                nextIcon = p.icon
+                foundNext = true
+                break
+            }
+        }
+
+        // If all prayers today have passed, next prayer is tomorrow's Fajr
+        if !foundNext {
+            if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: date) {
+                let tomorrowTimes = pt.calculate(for: [activeLat, activeLng], date: tomorrow)
+                if let tomorrowFajrDate = parsePrayerDate(from: tomorrowTimes.fajr, baseDate: tomorrow) {
+                    nextName = "Fajr"
+                    nextDate = tomorrowFajrDate
+                    nextFormatted = formatTo12Hour(tomorrowTimes.fajr)
+                    nextIcon = "sunrise.fill"
                 }
             }
         }
 
         let dailyList = rawPrayers.map { item in
-            (name: item.name, time: item.timeStr, isNext: item.name == nextName)
+            (name: item.name, time: formatTo12Hour(item.timeStr), isNext: item.name == nextName)
         }
 
-        let entry = PrayerEntry(
-            date: now,
+        return PrayerEntry(
+            date: date,
             nextPrayerName: nextName,
             nextPrayerDate: nextDate,
             formattedTime: nextFormatted,
@@ -101,10 +117,43 @@ struct PrayerTimesTimelineProvider: TimelineProvider {
             locationName: city,
             dailyPrayers: dailyList
         )
+    }
 
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: now) ?? now.addingTimeInterval(900)
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-        completion(timeline)
+    private func parsePrayerDate(from timeStr: String, baseDate: Date) -> Date? {
+        let trimmed = timeStr.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cal = Calendar.current
+        let formats = ["HH:mm", "H:mm", "h:mm a", "hh:mm a", "h:mm", "hh:mm"]
+        for fmt in formats {
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.dateFormat = fmt
+            if let parsed = df.date(from: trimmed) {
+                var comp = cal.dateComponents([.hour, .minute], from: parsed)
+                comp.year = cal.component(.year, from: baseDate)
+                comp.month = cal.component(.month, from: baseDate)
+                comp.day = cal.component(.day, from: baseDate)
+                comp.second = 0
+                return cal.date(from: comp)
+            }
+        }
+        return nil
+    }
+
+    private func formatTo12Hour(_ timeStr: String) -> String {
+        let trimmed = timeStr.trimmingCharacters(in: .whitespacesAndNewlines)
+        let formats = ["HH:mm", "H:mm", "h:mm a", "hh:mm a", "h:mm", "hh:mm"]
+        for fmt in formats {
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.dateFormat = fmt
+            if let parsed = df.date(from: trimmed) {
+                let outFormatter = DateFormatter()
+                outFormatter.locale = Locale(identifier: "en_US_POSIX")
+                outFormatter.dateFormat = "h:mm a"
+                return outFormatter.string(from: parsed)
+            }
+        }
+        return trimmed
     }
 }
 
