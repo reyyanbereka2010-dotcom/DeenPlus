@@ -172,11 +172,13 @@ class NotificationManager {
             .requestAuthorization(
                 options: [.alert, .sound, .badge]
             ) { granted, error in
+                #if DEBUG
                 if granted {
                     print("Notifications allowed")
                 } else {
                     print("Notifications denied")
                 }
+                #endif
             }
     }
 
@@ -353,7 +355,9 @@ class NotificationManager {
             try hapticEngine?.start()
             hapticsAvailable = true
         } catch {
+            #if DEBUG
             print("Failed to start haptic engine: \(error.localizedDescription)")
+            #endif
             hapticsAvailable = false
         }
     }
@@ -373,7 +377,9 @@ class NotificationManager {
                 let player = try engine.makePlayer(with: pattern)
                 try player.start(atTime: 0)
             } catch {
+                #if DEBUG
                 print("Failed to play haptic pattern: \(error.localizedDescription)")
+                #endif
                 AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
             }
         } else {
@@ -396,7 +402,9 @@ class NotificationManager {
         guard let url = Bundle.main.url(forResource: name, withExtension: ext) ??
                         Bundle.main.url(forResource: name, withExtension: ext, subdirectory: nil) ??
                         (FileManager.default.fileExists(atPath: soundFile) ? URL(fileURLWithPath: soundFile) : nil) else {
+            #if DEBUG
             print("Audio sound file '\(soundFile)' not found.")
+            #endif
             return
         }
 
@@ -407,7 +415,9 @@ class NotificationManager {
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
         } catch {
+            #if DEBUG
             print("Failed to play sound: \(error.localizedDescription)")
+            #endif
         }
     }
 }

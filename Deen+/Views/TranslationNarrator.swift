@@ -222,7 +222,9 @@ final class TranslationNarrator: NSObject, ObservableObject {
             try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
             try session.setActive(true)
         } catch {
+            #if DEBUG
             print("Failed to configure audio session for translation: \(error)")
+            #endif
         }
         #endif
     }

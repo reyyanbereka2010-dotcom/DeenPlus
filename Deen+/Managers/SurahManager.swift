@@ -2,40 +2,30 @@
 //  SurahManager.swift
 //  Deen+
 //
-//  Created by Reyyan Bereka on 7/22/26.
+//  Created by Reyyan Bereka on 7/16/26.
 //
 
 import Foundation
 import Combine
 
-
 @MainActor
 class SurahManager: ObservableObject {
 
     @Published var surahs: [Surah] = []
-
     @Published var isLoading = false
-
 
     func fetchSurahs() async {
 
-        if !surahs.isEmpty {
-            return
-        }
-
+        guard surahs.isEmpty else { return }
 
         isLoading = true
 
+        let urlString = "https://api.quran.com/api/v4/chapters?language=en"
 
-        guard let url = URL(
-            string: "https://api.quran.com/api/v4/chapters"
-        ) else {
-
+        guard let url = URL(string: urlString) else {
             isLoading = false
             return
-
         }
-
 
         do {
 
@@ -43,26 +33,19 @@ class SurahManager: ObservableObject {
                 from: url
             )
 
-
             let response = try JSONDecoder().decode(
                 SurahResponse.self,
                 from: data
             )
 
-
             self.surahs = response.chapters
 
-
         } catch {
-
-            print("Surah loading error:")
-            print(error)
-
+            #if DEBUG
+            print("Surah loading error:", error)
+            #endif
         }
 
-
         isLoading = false
-
     }
-
 }

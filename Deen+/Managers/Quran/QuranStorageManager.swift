@@ -39,7 +39,7 @@ final class QuranStorageManager {
             guard let self = self else { return }
             do {
                 let data = try JSONEncoder().encode(verses)
-                try data.write(to: self.bookmarksFile, options: .atomic)
+                try data.write(to: self.bookmarksFile, options: [.atomic, .completeFileProtection])
                 #if DEBUG
                 print("Saved bookmarks:", verses.count)
                 #endif

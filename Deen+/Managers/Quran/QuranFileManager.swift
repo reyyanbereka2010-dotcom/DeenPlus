@@ -30,7 +30,8 @@ final class QuranFileManager {
 
             try? FileManager.default.createDirectory(
                 at: folder,
-                withIntermediateDirectories: true
+                withIntermediateDirectories: true,
+                attributes: [.protectionKey: FileProtectionType.completeUnlessOpen]
             )
         }
 
@@ -239,7 +240,6 @@ final class QuranFileManager {
     func saveSurahAsync(id: Int, verses: [QuranVerse]) async {
         await withCheckedContinuation { continuation in
             self.saveSurah(id: id, verses: verses)
-            // Fire-and-forget; we resume immediately since saveSurah is async on queue
             continuation.resume()
         }
     }

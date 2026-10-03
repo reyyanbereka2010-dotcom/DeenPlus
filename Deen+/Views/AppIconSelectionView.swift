@@ -30,7 +30,7 @@ struct AppIconSelectionView: View {
                             // Icon Preview Squircle
                             AppIconPreviewBox(option: option)
 
-                            Text(option.title)
+                            Text(option.displayName)
                                 .font(.headline)
                                 .foregroundStyle(.primary)
 
@@ -50,15 +50,14 @@ struct AppIconSelectionView: View {
                 Text("Select an icon to display on your Home Screen and App Library. Each icon supports native iOS 18 Light, Dark, and Tinted customization.")
             }
         }
-        .listStyle(.insetGrouped)
         .navigationTitle("App Icon")
         .navigationBarTitleDisplayMode(.inline)
     }
 
     private func triggerHaptic() {
         #if canImport(UIKit)
-        let impact = UIImpactFeedbackGenerator(style: .medium)
-        impact.impactOccurred()
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
         #endif
     }
 }
@@ -66,44 +65,37 @@ struct AppIconSelectionView: View {
 // MARK: - App Icon Preview Box Component
 
 struct AppIconPreviewBox: View {
-    let option: OptionType
-
-    typealias OptionType = AppIconOption
-
-    private var fallbackIcon: String {
-        switch option {
-        case .original:
-            return "location.north.circle.fill"
-        default:
-            return "moon.stars.fill"
-        }
-    }
+    let option: AppIconOption
 
     var body: some View {
         ZStack {
-            if let uiImage = option.previewImage {
+            if let uiImage = UIImage(named: option.assetName) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                // High-fidelity vector fallback
-                LinearGradient(
-                    colors: option.colorGradient,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-
-                Image(systemName: fallbackIcon)
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(option == .monochrome ? Color.white : Color(red: 0.95, green: 0.85, blue: 0.50))
+                // Sleek fallback preview if image asset is missing in catalog
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.green.opacity(0.8), Color.blue.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        Image(systemName: "book.fill")
+                            .font(.title3)
+                            .foregroundStyle(.white)
+                    )
             }
         }
-        .frame(width: 58, height: 58)
-        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .frame(width: 54, height: 54)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.primary.opacity(0.12), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
+        .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
     }
 }
