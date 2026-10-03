@@ -208,7 +208,7 @@ struct SettingsView: View {
                         SettingsRowBadge(icon: "info.circle.fill", color: .gray)
                         Text("Version")
                         Spacer()
-                        Text("1.0 (18)")
+                        Text("1.0 (19)")
                             .foregroundStyle(.secondary)
                     }
 
